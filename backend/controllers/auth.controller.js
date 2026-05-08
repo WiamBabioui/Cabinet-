@@ -12,8 +12,8 @@ const generateToken = (id) => {
 export const signup = async (req, res) => {
   const { prenom, nom, email, mot_de_passe, role, telephone } = req.body;
 
-  // Seuls ces 3 rôles sont autorisés
-  const rolesAutorises = ['medecin', 'secretaire', 'patient'];
+  // Rôles autorisés
+  const rolesAutorises = ['admin', 'medecin', 'secretaire', 'patient'];
   if (!rolesAutorises.includes(role)) {
     return res.status(400).json({ message: 'Rôle invalide' });
   }
