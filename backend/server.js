@@ -13,6 +13,7 @@ import medecinRoutes   from './routes/medecin.routes.js';
 import appointmentRoutes from './routes/appointment.routes.js';
 import chatRoutes from './routes/chat.routes.js';
 import consultationRoutes from './routes/consultation.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 
 dotenv.config();
 
@@ -34,6 +35,7 @@ app.use('/api/medecins',  medecinRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/consultations', consultationRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: '🚀 Cabinet+ API fonctionne !' });
@@ -50,6 +52,11 @@ io.on('connection', (socket) => {
   socket.on('send_message', (data) => {
     // data: { conversation_id, message }
     socket.to(`conv_${data.conversation_id}`).emit('receive_message', data.message);
+  });
+
+  socket.on('delete_message', (data) => {
+    // data: { conversation_id, message_id }
+    socket.to(`conv_${data.conversation_id}`).emit('message_deleted', data.message_id);
   });
 
   socket.on('disconnect', () => console.log('🔌 Client déconnecté:', socket.id));

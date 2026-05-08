@@ -9,7 +9,8 @@ import {
   Phone,
   Video,
   CheckCheck,
-  Loader2
+  Loader2,
+  Trash2
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import Card from '../components/dashboard/Card';
@@ -56,8 +57,15 @@ const Chat = () => {
 
     socket.on('receive_message', handleReceiveMessage);
 
+    const handleMessageDeleted = (deletedMsgId) => {
+      setMessages(prev => prev.filter(m => m.id !== deletedMsgId));
+    };
+
+    socket.on('message_deleted', handleMessageDeleted);
+
     return () => {
       socket.off('receive_message', handleReceiveMessage);
+      socket.off('message_deleted', handleMessageDeleted);
     };
   }, [conversationId]);
 
@@ -118,6 +126,26 @@ const Chat = () => {
     } catch (err) {
       console.error('Erreur lors de l\'envoi du message:', err.response?.data || err.message);
       alert('Erreur: ' + (err.response?.data?.message || 'Impossible d\'envoyer le message'));
+    }
+  };
+
+  const handleDeleteMessage = async (messageId) => {
+    if (!window.confirm('Voulez-vous vraiment supprimer ce message ?')) return;
+
+    try {
+      await api.delete(`/chat/messages/${messageId}`);
+      
+      // Update local state
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+
+      // Notify other user
+      socket.emit('delete_message', {
+        conversation_id: conversationId,
+        message_id: messageId
+      });
+    } catch (err) {
+      console.error('Erreur lors de la suppression:', err);
+      alert('Impossible de supprimer le message');
     }
   };
 
@@ -224,7 +252,7 @@ const Chat = () => {
                   </div>
 
                   {messages.map((msg) => (
-                    <div key={msg.id} className={`flex ${msg.expediteur_id === me.id ? 'justify-end' : 'justify-start'}`}>
+                    <div key={msg.id} className={`flex group ${msg.expediteur_id === me.id ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[70%] ${msg.expediteur_id === me.id ? 'order-1' : 'order-2'}`}>
                         <div className={`p-4 rounded-2xl shadow-sm relative ${
                           msg.expediteur_id === me.id 
@@ -238,6 +266,16 @@ const Chat = () => {
                             {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                             {msg.expediteur_id === me.id && <CheckCheck size={14} className={msg.lu ? 'text-blue-300' : 'text-white/40'} />}
                           </div>
+
+                          {msg.expediteur_id === me.id && (
+                            <button 
+                              onClick={() => handleDeleteMessage(msg.id)}
+                              className="absolute -left-8 top-1/2 -translate-y-1/2 p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                              title="Supprimer le message"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

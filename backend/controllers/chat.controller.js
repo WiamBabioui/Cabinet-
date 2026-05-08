@@ -1,4 +1,5 @@
 import pool from '../config/db.mysql.js';
+import { createNotification } from './notification.controller.js';
 
 // ─── Get or create conversation between two users ─────────
 const getOrCreateConversation = async (user1_id, user2_id) => {
@@ -122,6 +123,15 @@ export const sendMessage = async (req, res) => {
       [result.insertId]
     );
 
+    // Notification pour le destinataire
+    await createNotification(
+      destinataire_id, 
+      'message_new', 
+      'Nouveau message', 
+      `${req.user.prenom} vous a envoyé un message : ${contenu.substring(0, 50)}...`,
+      { conversation_id: conv.id, expediteur_id }
+    );
+
     res.status(201).json({ message: msg[0] });
   } catch (err) {
     console.error('sendMessage error:', err);
@@ -180,4 +190,63 @@ export const getContacts = async (req, res) => {
     console.error('getContacts error:', err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
-};
+};
+
+// ─── DELETE /api/chat/messages/:messageId ─────────────────
+export const deleteMessage = async (req, res) => {
+  const messageId = req.params.messageId;
+  const userId = req.user.id;
+
+  try {
+    // Check if message exists and belongs to user
+    const [msgRows] = await pool.execute(
+      'SELECT * FROM messages WHERE id = ?',
+      [messageId]
+    );
+
+    if (msgRows.length === 0) {
+      return res.status(404).json({ message: 'Message introuvable' });
+    }
+
+    const message = msgRows[0];
+
+    if (message.expediteur_id !== userId) {
+      return res.status(403).json({ message: 'Non autorisé à supprimer ce message' });
+    }
+
+    // Delete the message
+    await pool.execute('DELETE FROM messages WHERE id = ?', [messageId]);
+
+    // Update conversation's last message if it was the one deleted
+    const [convRows] = await pool.execute(
+      'SELECT * FROM conversations WHERE id = ?',
+      [message.conversation_id]
+    );
+
+    if (convRows.length > 0) {
+      // Find the new last message
+      const [lastMsgRows] = await pool.execute(
+        'SELECT contenu, created_at FROM messages WHERE conversation_id = ? ORDER BY created_at DESC LIMIT 1',
+        [message.conversation_id]
+      );
+
+      if (lastMsgRows.length > 0) {
+        await pool.execute(
+          'UPDATE conversations SET dernier_message = ?, last_msg_at = ? WHERE id = ?',
+          [lastMsgRows[0].contenu.substring(0, 100), lastMsgRows[0].created_at, message.conversation_id]
+        );
+      } else {
+        // No messages left in conversation
+        await pool.execute(
+          'UPDATE conversations SET dernier_message = NULL, last_msg_at = created_at WHERE id = ?',
+          [message.conversation_id]
+        );
+      }
+    }
+
+    res.json({ message: 'Message supprimé avec succès' });
+  } catch (err) {
+    console.error('deleteMessage error:', err);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};

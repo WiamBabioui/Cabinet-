@@ -1,11 +1,23 @@
 import pool from '../config/db.mysql.js';
 
 // ─── Helper: create notification (also used by other controllers) ──
-export const createNotification = async (userId, type, titre, message, data = {}) => {
+export const createNotification = async (destinataireId, type, titre, message, data = {}) => {
+  // Mapping internal types to DB enums
+  const typeMap = {
+    'appointment_new':       'rappel_rdv',
+    'appointment_confirmed': 'confirmation_rdv',
+    'appointment_cancelled': 'annulation_rdv',
+    'appointment_completed': 'alerte_systeme',
+    'message_new':           'message_interne',
+    'system_welcome':        'alerte_systeme'
+  };
+
+  const dbType = typeMap[type] || 'alerte_systeme';
+
   try {
     await pool.execute(
-      'INSERT INTO notifications (user_id, type, titre, message, data_json) VALUES (?, ?, ?, ?, ?)',
-      [userId, type, titre, message, JSON.stringify(data)]
+      'INSERT INTO notifications (destinataire_id, type, titre, corps, donnees_contexte) VALUES (?, ?, ?, ?, ?)',
+      [destinataireId, dbType, titre, message, JSON.stringify(data)]
     );
   } catch (err) {
     console.error('createNotification error:', err);
@@ -17,7 +29,7 @@ export const getNotifications = async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT * FROM notifications
-       WHERE user_id = ?
+       WHERE destinataire_id = ?
        ORDER BY created_at DESC
        LIMIT 50`,
       [req.user.id]
@@ -25,6 +37,7 @@ export const getNotifications = async (req, res) => {
     const unread = rows.filter(n => !n.lu).length;
     res.json({ notifications: rows, unread });
   } catch (err) {
+    console.error('getNotifications error:', err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
@@ -33,7 +46,7 @@ export const getNotifications = async (req, res) => {
 export const markAsRead = async (req, res) => {
   try {
     await pool.execute(
-      'UPDATE notifications SET lu = 1 WHERE id = ? AND user_id = ?',
+      'UPDATE notifications SET lu = 1, lu_le = NOW() WHERE id = ? AND destinataire_id = ?',
       [req.params.id, req.user.id]
     );
     res.json({ message: 'Notification lue' });
@@ -46,7 +59,7 @@ export const markAsRead = async (req, res) => {
 export const markAllAsRead = async (req, res) => {
   try {
     await pool.execute(
-      'UPDATE notifications SET lu = 1 WHERE user_id = ?',
+      'UPDATE notifications SET lu = 1, lu_le = NOW() WHERE destinataire_id = ?',
       [req.user.id]
     );
     res.json({ message: 'Toutes les notifications marquées comme lues' });
@@ -59,11 +72,11 @@ export const markAllAsRead = async (req, res) => {
 export const deleteNotification = async (req, res) => {
   try {
     await pool.execute(
-      'DELETE FROM notifications WHERE id = ? AND user_id = ?',
+      'DELETE FROM notifications WHERE id = ? AND destinataire_id = ?',
       [req.params.id, req.user.id]
     );
     res.json({ message: 'Notification supprimée' });
   } catch (err) {
     res.status(500).json({ message: 'Erreur serveur' });
   }
-};
+};

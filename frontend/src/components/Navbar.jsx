@@ -10,9 +10,17 @@ const NotificationsDropdown = ({ onClose }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Pour l'instant on affiche des notifs vides — Dev B connectera l'API
-    setLoading(false);
-    setNotifications([]);
+    const fetchNotifs = async () => {
+      try {
+        const res = await api.get('/notifications');
+        setNotifications(res.data.notifications);
+      } catch (err) {
+        console.error('Failed to fetch notifications');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchNotifs();
   }, []);
 
   return (
@@ -50,25 +58,78 @@ const NotificationsDropdown = ({ onClose }) => {
 };
 
 // ─── Dropdown Messages ────────────────────────────────────────────────────────
-const MessagesDropdown = ({ onClose }) => (
-  <div className="absolute right-0 top-14 w-72 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden">
-    <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-      <h3 className="font-bold text-slate-800 text-sm">Messages</h3>
-      <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg">
-        <X size={16} />
-      </button>
+const MessagesDropdown = ({ onClose }) => {
+  const [conversations, setConversations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchConvs = async () => {
+      try {
+        const res = await api.get('/chat/conversations');
+        setConversations(res.data.conversations.slice(0, 5));
+      } catch (err) {
+        console.error('Failed to fetch conversations');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchConvs();
+  }, []);
+
+  return (
+    <div className="absolute right-0 top-14 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+        <h3 className="font-bold text-slate-800 text-sm">Messages récents</h3>
+        <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg">
+          <X size={16} />
+        </button>
+      </div>
+      <div className="max-h-80 overflow-y-auto">
+        {loading ? (
+          <div className="p-6 text-center text-slate-400 text-sm">Chargement...</div>
+        ) : conversations.length === 0 ? (
+          <div className="p-8 text-center">
+            <Mail size={32} className="text-slate-200 mx-auto mb-3" />
+            <p className="text-sm text-slate-400">Aucun message</p>
+          </div>
+        ) : (
+          conversations.map((conv) => (
+            <button
+              key={conv.id}
+              onClick={() => { navigate('/chat'); onClose(); }}
+              className="w-full px-4 py-3 hover:bg-slate-50 border-b border-slate-50 flex items-center gap-3 text-left"
+            >
+              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold text-xs overflow-hidden shrink-0">
+                {conv.other_user.photo_url ? (
+                  <img src={conv.other_user.photo_url} alt="" className="w-full h-full object-cover" />
+                ) : conv.other_user.prenom.charAt(0)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-center">
+                  <p className="text-sm font-bold text-slate-800 truncate">{conv.other_user.prenom} {conv.other_user.nom}</p>
+                  <span className="text-[10px] text-slate-400 shrink-0">{new Date(conv.last_msg_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                </div>
+                <p className="text-xs text-slate-500 truncate">{conv.dernier_message}</p>
+              </div>
+              {conv.unread_count > 0 && (
+                <div className="w-2 h-2 bg-blue-500 rounded-full shrink-0"></div>
+              )}
+            </button>
+          ))
+        )}
+      </div>
+      <div className="px-4 py-3 border-t border-slate-100">
+        <button 
+          onClick={() => { navigate('/chat'); onClose(); }}
+          className="text-xs font-semibold text-primary hover:underline w-full text-center"
+        >
+          Ouvrir le chat
+        </button>
+      </div>
     </div>
-    <div className="p-8 text-center">
-      <Mail size={32} className="text-slate-200 mx-auto mb-3" />
-      <p className="text-sm text-slate-400">Aucun message</p>
-    </div>
-    <div className="px-4 py-3 border-t border-slate-100">
-      <button className="text-xs font-semibold text-primary hover:underline w-full text-center">
-        Ouvrir le chat
-      </button>
-    </div>
-  </div>
-);
+  );
+};
 
 // ─── Dropdown Profil ──────────────────────────────────────────────────────────
 const ProfileDropdown = ({ user, onClose, onLogout }) => {
@@ -141,6 +202,29 @@ const Navbar = () => {
   const [showMessages, setShowMessages] = useState(false);
   const [showProfile,  setShowProfile]  = useState(false);
   const [notifCount,   setNotifCount]   = useState(0);
+  const [msgCount,     setMsgCount]     = useState(0);
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const [notifRes, chatRes] = await Promise.all([
+          api.get('/notifications'),
+          api.get('/chat/conversations')
+        ]);
+        setNotifCount(notifRes.data.unread || 0);
+        
+        const totalUnreadMsg = chatRes.data.conversations.reduce((acc, conv) => acc + (conv.unread_count || 0), 0);
+        setMsgCount(totalUnreadMsg);
+      } catch (err) {
+        console.error('Failed to fetch navbar counts');
+      }
+    };
+
+    fetchCounts();
+    // Poll every minute for updates
+    const interval = setInterval(fetchCounts, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const navRef = useRef(null);
 
@@ -212,7 +296,14 @@ const Navbar = () => {
             }`}
           >
             <Mail size={22} />
-            <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white" />
+            {msgCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white">
+                {msgCount}
+              </span>
+            )}
+            {msgCount === 0 && (
+              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white" />
+            )}
           </button>
           {showMessages && (
             <MessagesDropdown onClose={() => setShowMessages(false)} />
