@@ -11,6 +11,8 @@ import patientRoutes   from './routes/patient.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import medecinRoutes   from './routes/medecin.routes.js';
 import appointmentRoutes from './routes/appointment.routes.js';
+import chatRoutes from './routes/chat.routes.js';
+import consultationRoutes from './routes/consultation.routes.js';
 
 dotenv.config();
 
@@ -30,6 +32,8 @@ app.use('/api/patients',  patientRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/medecins',  medecinRoutes);
 app.use('/api/appointments', appointmentRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/consultations', consultationRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: '🚀 Cabinet+ API fonctionne !' });
@@ -37,8 +41,20 @@ app.get('/api/health', (req, res) => {
 
 io.on('connection', (socket) => {
   console.log('🔌 Client connecté:', socket.id);
+
+  socket.on('join_conversation', (conversationId) => {
+    socket.join(`conv_${conversationId}`);
+    console.log(`👤 Client ${socket.id} a rejoint conv_${conversationId}`);
+  });
+
+  socket.on('send_message', (data) => {
+    // data: { conversation_id, message }
+    socket.to(`conv_${data.conversation_id}`).emit('receive_message', data.message);
+  });
+
   socket.on('disconnect', () => console.log('🔌 Client déconnecté:', socket.id));
 });
+
 
 export { io };
 connectMongo();

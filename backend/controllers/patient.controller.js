@@ -276,3 +276,68 @@ export const updateDossierMedical = async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
+
+// ✅ DONNÉES DU PORTAIL PATIENT
+export const getPortalData = async (req, res) => {
+  const { email } = req.user;
+  try {
+    // 1. Profil du patient (lié par email)
+    const [patients] = await pool.execute(
+      `SELECT p.*, CONCAT(u.prenom, ' ', u.nom) as medecin_traitant
+       FROM patients p
+       LEFT JOIN medecins m ON m.id = p.medecin_traitant_id
+       LEFT JOIN utilisateurs u ON u.id = m.utilisateur_id
+       WHERE p.email = ? AND p.deleted_at IS NULL`,
+      [email]
+    );
+
+    if (patients.length === 0) {
+      return res.status(404).json({ message: 'Profil patient non trouvé' });
+    }
+
+    const patient = patients[0];
+
+    // 2. Dossier médical
+    const [dossier] = await pool.execute(
+      'SELECT * FROM dossiers_medicaux WHERE patient_id = ?',
+      [patient.id]
+    );
+
+    // 3. Prochains rendez-vous (futurs)
+    const [prochainsRDV] = await pool.execute(
+      `SELECT rv.*, u_m.prenom as medecin_prenom, u_m.nom as medecin_nom
+       FROM rendez_vous rv
+       JOIN medecins m ON m.id = rv.medecin_id
+       JOIN utilisateurs u_m ON u_m.id = m.utilisateur_id
+       WHERE rv.patient_id = ? AND rv.date_heure_debut >= NOW() AND rv.statut != 'annule'
+       ORDER BY rv.date_heure_debut ASC
+       LIMIT 1`,
+      [patient.id]
+    );
+
+    // 4. Historique des consultations (records)
+    const [consultations] = await pool.execute(
+      `SELECT c.*, CONCAT(u_m.prenom, ' ', u_m.nom) as medecin_nom
+       FROM consultations c
+       JOIN dossiers_medicaux dm ON dm.id = c.dossier_medical_id
+       JOIN medecins m ON m.id = c.medecin_id
+       JOIN utilisateurs u_m ON u_m.id = m.utilisateur_id
+       WHERE dm.patient_id = ?
+       ORDER BY c.date_consultation DESC
+       LIMIT 5`,
+      [patient.id]
+    );
+
+
+    res.json({
+      patient,
+      dossier: dossier[0] || null,
+      prochainRDV: prochainsRDV[0] || null,
+      consultations
+    });
+
+  } catch (err) {
+    console.error('getPortalData error:', err);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};

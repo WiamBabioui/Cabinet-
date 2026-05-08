@@ -1,8 +1,9 @@
 import express from 'express';
 import {
   getPatients, getPatientById, createPatient,
-  updatePatient, deletePatient, updateDossierMedical
+  updatePatient, deletePatient, updateDossierMedical, getPortalData
 } from '../controllers/patient.controller.js';
+
 import { protect, authorize } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
@@ -11,7 +12,10 @@ const router = express.Router();
 router.use(protect);
 
 router.get('/', getPatients);
+router.get('/portal', getPortalData);
+
 router.get('/:id', getPatientById);
+
 router.post('/', authorize('admin', 'medecin', 'secretaire'), createPatient);
 router.put('/:id', authorize('admin', 'medecin', 'secretaire'), updatePatient);
 router.delete('/:id', authorize('admin'), deletePatient);

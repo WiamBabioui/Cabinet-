@@ -71,11 +71,12 @@ function App() {
 
         {/* ── Dev B ── */}
         <Route path="appointments" element={<Appointments />} />
-        <Route path="consultation" element={
+        <Route path="consultation/:appointmentId?" element={
           <PrivateRoute allowedRoles={['medecin']}>
             <Consultation />
           </PrivateRoute>
         } />
+
         <Route path="chat" element={<Chat />} />
 
         {/* ── Rôles spécifiques ── */}

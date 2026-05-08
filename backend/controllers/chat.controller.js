@@ -131,28 +131,40 @@ export const sendMessage = async (req, res) => {
 
 // ─── GET /api/chat/contacts ───────────────────────────────
 export const getContacts = async (req, res) => {
-  const { role, id } = req.user;
+  const { role, id, email } = req.user;
   try {
     let query;
     let params = [];
 
     if (role === 'medecin') {
       // Doctor can chat with: their patients + secretaries
+      // A doctor's patients are those who have a rendez-vous with them
       query = `
         SELECT DISTINCT u.id, u.prenom, u.nom, u.role, u.photo_url
         FROM utilisateurs u
-        WHERE u.id != ? AND u.role IN ('patient','secretaire') AND u.actif = 1
+        LEFT JOIN patients p ON p.email = u.email
+        LEFT JOIN rendez_vous r ON r.patient_id = p.id
+        LEFT JOIN medecins m ON m.id = r.medecin_id
+        WHERE u.id != ? 
+          AND (
+            (u.role = 'patient' AND m.utilisateur_id = ?) 
+            OR u.role = 'secretaire'
+          )
+          AND u.actif = 1
         ORDER BY u.role, u.nom`;
-      params = [id];
+      params = [id, id];
     } else if (role === 'patient') {
       // Patient can chat with: their doctors
+      // Find doctors linked via rendez-vous (matching patients.email with utilisateurs.email)
       query = `
         SELECT DISTINCT u.id, u.prenom, u.nom, u.role, u.photo_url
         FROM utilisateurs u
-        JOIN rendez_vous r ON (r.medecin_id = u.id OR r.medecin_id = u.id)
-        WHERE r.patient_id = ? AND u.role = 'medecin' AND u.actif = 1
+        JOIN medecins m ON m.utilisateur_id = u.id
+        JOIN rendez_vous r ON r.medecin_id = m.id
+        JOIN patients p ON p.id = r.patient_id
+        WHERE p.email = ? AND u.role = 'medecin' AND u.actif = 1
         ORDER BY u.nom`;
-      params = [id];
+      params = [email];
     } else if (role === 'secretaire') {
       // Secretary can chat with: doctors
       query = `
@@ -168,4 +180,4 @@ export const getContacts = async (req, res) => {
     console.error('getContacts error:', err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
-};
+};
