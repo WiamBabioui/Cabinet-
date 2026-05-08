@@ -10,6 +10,7 @@ import userRoutes      from './routes/user.routes.js';
 import patientRoutes   from './routes/patient.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import medecinRoutes   from './routes/medecin.routes.js';
+import appointmentRoutes from './routes/appointment.routes.js';
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use('/api/users',     userRoutes);
 app.use('/api/patients',  patientRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/medecins',  medecinRoutes);
+app.use('/api/appointments', appointmentRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: '🚀 Cabinet+ API fonctionne !' });
