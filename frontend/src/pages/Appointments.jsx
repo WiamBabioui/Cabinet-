@@ -13,12 +13,16 @@ import Card from '../components/dashboard/Card';
 import Badge from '../components/common/Badge';
 import Button from '../components/common/Button';
 import api from '../services/api';
+import CreateAppointmentModal from '../components/dashboard/CreateAppointmentModal';
+import { useAuth } from '../context/AuthContext';
 
 const Appointments = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchAppointments();
@@ -50,12 +54,19 @@ const Appointments = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-slate-800">Rendez-vous</h1>
-        <input 
-          type="date" 
-          value={selectedDate} 
-          onChange={(e) => setSelectedDate(e.target.value)}
-          className="px-4 py-2 rounded-xl border border-slate-200"
-        />
+        <div className="flex gap-4">
+          {user?.role === 'medecin' && (
+            <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2">
+              <Plus size={18} /> Nouveau rendez-vous
+            </Button>
+          )}
+          <input 
+            type="date" 
+            value={selectedDate} 
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="px-4 py-2 rounded-xl border border-slate-200"
+          />
+        </div>
       </div>
 
       {error && <div className="p-4 bg-red-50 text-red-700 rounded-xl">{error}</div>}
@@ -79,6 +90,12 @@ const Appointments = () => {
           <p className="text-center text-slate-500 py-10">Aucun rendez-vous pour cette date.</p>
         )}
       </div>
+
+      <CreateAppointmentModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onCreated={fetchAppointments} 
+      />
     </div>
   );
 };
