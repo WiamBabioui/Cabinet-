@@ -8,9 +8,11 @@ import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import { useTranslation } from 'react-i18next';
 
 // ─── Modal Ajout Utilisateur ──────────────────────────────────────────────────
 const AddUserModal = ({ onClose, onSuccess }) => {
+  const { t } = useTranslation();
   const [form, setForm] = useState({
     prenom: '', nom: '', email: '', mot_de_passe: '',
     role: 'secretaire', telephone: '',
@@ -34,7 +36,7 @@ const AddUserModal = ({ onClose, onSuccess }) => {
       onSuccess();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors de la création');
+      setError(err.response?.data?.message || t('users.modal.error'));
     } finally { setLoading(false); }
   };
 
@@ -42,7 +44,7 @@ const AddUserModal = ({ onClose, onSuccess }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-slate-800">Nouvel utilisateur</h2>
+          <h2 className="text-xl font-bold text-slate-800">{t('users.modal.title')}</h2>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl"><X size={20} /></button>
         </div>
 
@@ -55,51 +57,51 @@ const AddUserModal = ({ onClose, onSuccess }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Prénom *</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">{t('users.modal.firstname')}</label>
               <input name="prenom" value={form.prenom} onChange={handleChange} required
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Nom *</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">{t('users.modal.lastname')}</label>
               <input name="nom" value={form.nom} onChange={handleChange} required
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20" />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Email *</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">{t('users.modal.email')}</label>
             <input type="email" name="email" value={form.email} onChange={handleChange} required
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20" />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Mot de passe *</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">{t('users.modal.password')}</label>
             <input type="password" name="mot_de_passe" value={form.mot_de_passe} onChange={handleChange} required
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20" />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Rôle *</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">{t('users.modal.role')}</label>
             <select name="role" value={form.role} onChange={handleChange}
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20">
-              <option value="secretaire">Secrétaire</option>
-              <option value="medecin">Médecin</option>
-              <option value="admin">Admin</option>
+              <option value="secretaire">{t('roles.secretaire')}</option>
+              <option value="medecin">{t('roles.medecin')}</option>
+              <option value="admin">{t('roles.admin')}</option>
             </select>
           </div>
 
           {form.role === 'medecin' && (
             <>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Spécialité *</label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">{t('users.modal.specialty')}</label>
                 <select name="specialite_id" value={form.specialite_id} onChange={handleChange} required
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20">
-                  <option value="">Sélectionner...</option>
+                  <option value="">{t('users.modal.specialty_select')}</option>
                   {specialites.map(s => <option key={s.id} value={s.id}>{s.libelle}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">N° Ordre *</label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">{t('users.modal.order_num')}</label>
                 <input name="num_ordre" value={form.num_ordre} onChange={handleChange} required
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20" />
               </div>
@@ -107,17 +109,17 @@ const AddUserModal = ({ onClose, onSuccess }) => {
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Téléphone</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">{t('users.modal.phone')}</label>
             <input name="telephone" value={form.telephone} onChange={handleChange}
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20" />
           </div>
 
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="ghost" className="flex-1 border border-slate-200" onClick={onClose}>
-              Annuler
+              {t('common.cancel')}
             </Button>
             <Button type="submit" className="flex-1" isLoading={loading}>
-              Créer
+              {t('users.modal.create')}
             </Button>
           </div>
         </form>
@@ -129,6 +131,7 @@ const AddUserModal = ({ onClose, onSuccess }) => {
 // ─── Page Principale ──────────────────────────────────────────────────────────
 const UsersPage = () => {
   const { user: currentUser } = useAuth();
+  const { t } = useTranslation();
   const [users, setUsers]         = useState([]);
   const [loading, setLoading]     = useState(true);
   const [search, setSearch]       = useState('');
@@ -153,7 +156,7 @@ const UsersPage = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Supprimer cet utilisateur ?')) return;
+    if (!window.confirm(t('users.actions.delete_confirm'))) return;
     try {
       await api.delete(`/users/${id}`);
       fetchUsers();
@@ -183,7 +186,7 @@ const UsersPage = () => {
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <Shield size={48} className="text-slate-300 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-slate-700">Accès réservé aux administrateurs</h2>
+          <h2 className="text-xl font-bold text-slate-700">{t('users.access_denied')}</h2>
         </div>
       </div>
     );
@@ -200,20 +203,24 @@ const UsersPage = () => {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">Gestion des Utilisateurs</h1>
-          <p className="text-slate-500 mt-1">{users.length} utilisateur{users.length > 1 ? 's' : ''} enregistré{users.length > 1 ? 's' : ''}</p>
+          <h1 className="text-3xl font-bold text-slate-800">{t('users.title')}</h1>
+          <p className="text-slate-500 mt-1">
+            {users.length > 1 
+              ? t('users.subtitle_plural', { count: users.length }) 
+              : t('users.subtitle', { count: users.length })}
+          </p>
         </div>
         <Button icon={Plus} onClick={() => setShowModal(true)}>
-          Ajouter un utilisateur
+          {t('users.add')}
         </Button>
       </div>
 
       {/* Statistiques rapides */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: 'Médecins',    count: users.filter(u => u.role === 'medecin').length,    color: 'bg-blue-50 text-blue-700' },
-          { label: 'Secrétaires', count: users.filter(u => u.role === 'secretaire').length, color: 'bg-amber-50 text-amber-700' },
-          { label: 'Admins',      count: users.filter(u => u.role === 'admin').length,      color: 'bg-purple-50 text-purple-700' },
+          { label: t('roles.medecin'),    count: users.filter(u => u.role === 'medecin').length,    color: 'bg-blue-50 text-blue-700' },
+          { label: t('roles.secretaire'), count: users.filter(u => u.role === 'secretaire').length, color: 'bg-amber-50 text-amber-700' },
+          { label: t('roles.admin'),      count: users.filter(u => u.role === 'admin').length,      color: 'bg-purple-50 text-purple-700' },
         ].map(s => (
           <div key={s.label} className={`p-4 rounded-2xl ${s.color} text-center`}>
             <p className="text-2xl font-black">{s.count}</p>
@@ -224,7 +231,7 @@ const UsersPage = () => {
 
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
         <div className="mb-6">
-          <Input placeholder="Rechercher par nom ou email..."
+          <Input placeholder={t('users.search_placeholder')}
             icon={Search} value={search}
             onChange={e => setSearch(e.target.value)} />
         </div>
@@ -238,11 +245,11 @@ const UsersPage = () => {
             <table className="w-full">
               <thead className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
                 <tr>
-                  <th className="px-6 py-4 text-left rounded-l-xl">Utilisateur</th>
-                  <th className="px-6 py-4 text-left">Rôle</th>
-                  <th className="px-6 py-4 text-left">Téléphone</th>
-                  <th className="px-6 py-4 text-left">Statut</th>
-                  <th className="px-6 py-4 text-right rounded-r-xl">Actions</th>
+                  <th className="px-6 py-4 text-left rounded-l-xl">{t('users.table.user')}</th>
+                  <th className="px-6 py-4 text-left">{t('users.table.role')}</th>
+                  <th className="px-6 py-4 text-left">{t('users.table.phone')}</th>
+                  <th className="px-6 py-4 text-left">{t('users.table.status')}</th>
+                  <th className="px-6 py-4 text-right rounded-r-xl">{t('users.table.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -261,7 +268,7 @@ const UsersPage = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${roleColor(u.role)}`}>
-                        {roleIcon(u.role)} {u.role}
+                        {roleIcon(u.role)} {t(`roles.${u.role}`)}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
@@ -269,7 +276,7 @@ const UsersPage = () => {
                     </td>
                     <td className="px-6 py-4">
                       <Badge variant={u.actif ? 'success' : 'error'}>
-                        {u.actif ? 'Actif' : 'Inactif'}
+                        {u.actif ? t('users.status.active') : t('users.status.inactive')}
                       </Badge>
                     </td>
                     <td className="px-6 py-4">
@@ -282,7 +289,7 @@ const UsersPage = () => {
                                 ? 'text-green-500 hover:bg-green-50'
                                 : 'text-slate-400 hover:bg-slate-100'
                             }`}
-                            title={u.actif ? 'Désactiver' : 'Activer'}>
+                            title={u.actif ? t('users.actions.deactivate') : t('users.actions.activate')}>
                             {u.actif ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
                           </button>
                         )}
@@ -290,7 +297,7 @@ const UsersPage = () => {
                         {currentUser.id !== u.id && (
                           <button onClick={() => handleDelete(u.id)}
                             className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-all"
-                            title="Supprimer">
+                            title={t('users.actions.delete')}>
                             <Trash2 size={18} />
                           </button>
                         )}
@@ -304,7 +311,7 @@ const UsersPage = () => {
             {filtered.length === 0 && (
               <div className="text-center py-16">
                 <Users size={40} className="mx-auto mb-3 text-slate-300" />
-                <p className="text-slate-500 text-sm">Aucun utilisateur trouvé</p>
+                <p className="text-slate-500 text-sm">{t('users.no_users')}</p>
               </div>
             )}
           </div>

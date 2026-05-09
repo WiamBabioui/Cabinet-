@@ -21,8 +21,11 @@ import { useAuth } from '../context/AuthContext';
 
 const socket = io('http://localhost:5000');
 
+import { useTranslation } from 'react-i18next';
+
 const Chat = () => {
   const { user: me } = useAuth();
+  const { t, i18n } = useTranslation();
   const [contacts, setContacts] = useState([]);
   const [activeContact, setActiveContact] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -108,7 +111,6 @@ const Chat = () => {
     setMessage('');
 
     try {
-      console.log('Envoi du message à:', activeContact.id);
       const res = await api.post('/chat/messages', {
         destinataire_id: activeContact.id,
         contenu: text
@@ -117,35 +119,27 @@ const Chat = () => {
       const newMsg = res.data.message;
       setMessages(prev => [...prev, newMsg]);
       
-      console.log('Message envoyé avec succès, ID conv:', conversationId);
-      // Notify other user via socket
       socket.emit('send_message', {
         conversation_id: conversationId,
         message: newMsg
       });
     } catch (err) {
-      console.error('Erreur lors de l\'envoi du message:', err.response?.data || err.message);
-      alert('Erreur: ' + (err.response?.data?.message || 'Impossible d\'envoyer le message'));
+      alert(t('chat.send_error') || 'Error sending message');
     }
   };
 
   const handleDeleteMessage = async (messageId) => {
-    if (!window.confirm('Voulez-vous vraiment supprimer ce message ?')) return;
+    if (!window.confirm(t('chat.delete_confirm'))) return;
 
     try {
       await api.delete(`/chat/messages/${messageId}`);
-      
-      // Update local state
       setMessages(prev => prev.filter(m => m.id !== messageId));
-
-      // Notify other user
       socket.emit('delete_message', {
         conversation_id: conversationId,
         message_id: messageId
       });
     } catch (err) {
-      console.error('Erreur lors de la suppression:', err);
-      alert('Impossible de supprimer le message');
+      alert(t('common.error_loading'));
     }
   };
 
@@ -159,7 +153,7 @@ const Chat = () => {
       {/* Sidebar Contacts */}
       <div className="w-80 flex flex-col gap-4">
         <div className="bg-white rounded-3xl p-4 shadow-soft border border-slate-100">
-          <Input placeholder="Rechercher..." icon={Search} className="bg-slate-50 border-none" />
+          <Input placeholder={t('nav.search')} icon={Search} className="bg-slate-50 border-none" />
         </div>
         
         <div className="flex-1 bg-white rounded-3xl p-4 shadow-soft border border-slate-100 overflow-y-auto space-y-2">
@@ -188,13 +182,13 @@ const Chat = () => {
                   <h4 className="font-bold text-sm truncate">{contact.prenom} {contact.nom}</h4>
                 </div>
                 <p className={`text-xs truncate ${activeContact?.id === contact.id ? 'text-white/80' : 'text-slate-500'}`}>
-                  {contact.role}
+                  {t(`roles.${contact.role}`)}
                 </p>
               </div>
             </button>
           ))}
           {contacts.length === 0 && (
-            <p className="text-center text-slate-400 text-sm py-10">Aucun contact trouvé</p>
+            <p className="text-center text-slate-400 text-sm py-10">{t('chat.no_contacts')}</p>
           )}
         </div>
       </div>
@@ -206,7 +200,7 @@ const Chat = () => {
             <div className="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center">
               <Send size={32} />
             </div>
-            <p className="font-medium">Sélectionnez une conversation pour commencer</p>
+            <p className="font-medium">{t('chat.select_conv')}</p>
           </div>
         ) : (
           <>
@@ -224,7 +218,7 @@ const Chat = () => {
                   </h3>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <div className="w-1.5 h-1.5 bg-secondary rounded-full"></div>
-                    <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">{activeContact.role}</span>
+                    <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">{t(`roles.${activeContact.role}`)}</span>
                   </div>
                 </div>
               </div>
@@ -248,7 +242,9 @@ const Chat = () => {
               ) : (
                 <>
                   <div className="flex justify-center">
-                    <span className="px-4 py-1.5 bg-white border border-slate-100 rounded-full text-xs font-bold text-slate-400 uppercase tracking-widest shadow-sm">Historique</span>
+                    <span className="px-4 py-1.5 bg-white border border-slate-100 rounded-full text-xs font-bold text-slate-400 uppercase tracking-widest shadow-sm">
+                      {t('chat.history')}
+                    </span>
                   </div>
 
                   {messages.map((msg) => (
@@ -263,7 +259,7 @@ const Chat = () => {
                           <div className={`flex items-center justify-end gap-1 mt-2 text-[10px] ${
                             msg.expediteur_id === me.id ? 'text-white/60' : 'text-slate-400'
                           }`}>
-                            {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(msg.created_at).toLocaleTimeString(i18n.language === 'ar' ? 'ar-MA' : 'fr-MA', { hour: '2-digit', minute: '2-digit' })}
                             {msg.expediteur_id === me.id && <CheckCheck size={14} className={msg.lu ? 'text-blue-300' : 'text-white/40'} />}
                           </div>
 
@@ -271,7 +267,7 @@ const Chat = () => {
                             <button 
                               onClick={() => handleDeleteMessage(msg.id)}
                               className="absolute -left-8 top-1/2 -translate-y-1/2 p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                              title="Supprimer le message"
+                              title={t('chat.delete_tooltip')}
                             >
                               <Trash2 size={14} />
                             </button>
@@ -298,7 +294,7 @@ const Chat = () => {
                 </div>
                 <input 
                   type="text" 
-                  placeholder="Écrivez votre message..."
+                  placeholder={t('chat.placeholder')}
                   className="flex-1 bg-transparent border-none outline-none text-sm p-2"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}

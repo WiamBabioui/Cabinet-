@@ -14,8 +14,11 @@ import Button from '../components/common/Button';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
+import { useTranslation } from 'react-i18next';
+
 const Dashboard = () => {
   const { user } = useAuth();
+  const { t, i18n } = useTranslation();
   const [stats, setStats]   = useState(null);
   const [rdv, setRdv]       = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,13 +34,13 @@ const Dashboard = () => {
         setStats(statsRes.data);
         setRdv(rdvRes.data.rdv);
       } catch (err) {
-        setError('Impossible de charger les données du tableau de bord');
+        setError(t('common.error_loading'));
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, []);
+  }, [t]);
 
   if (loading) {
     return (
@@ -57,25 +60,25 @@ const Dashboard = () => {
 
   const kpis = [
     {
-      title: 'Total Patients',
+      title: t('dashboard.total_patients'),
       value: stats?.stats?.total_patients ?? 0,
       icon: Users,
       color: 'bg-blue-500',
     },
     {
-      title: 'RDV Aujourd\'hui',
+      title: t('dashboard.today_appointments'),
       value: stats?.stats?.rdv_aujourd_hui ?? 0,
       icon: Calendar,
       color: 'bg-green-500',
     },
     {
-      title: 'Médecins Actifs',
+      title: t('dashboard.active_doctors'),
       value: stats?.stats?.total_medecins ?? 0,
       icon: User,
       color: 'bg-amber-500',
     },
     {
-      title: 'Nouveaux ce mois',
+      title: t('dashboard.new_this_month'),
       value: stats?.stats?.nouveaux_patients ?? 0,
       icon: TrendingUp,
       color: 'bg-primary',
@@ -101,12 +104,12 @@ const Dashboard = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">Vue d'ensemble</h1>
+          <h1 className="text-3xl font-bold text-slate-800">{t('dashboard.overview')}</h1>
           <p className="text-slate-500 mt-1">
-            Bonjour, {user?.prenom} {user?.nom}. Voici ce qui se passe aujourd'hui.
+            {t('dashboard.welcome', { name: user?.prenom })}
           </p>
         </div>
-        <Button icon={Plus}>Nouveau RDV</Button>
+        <Button icon={Plus}>{t('dashboard.new_appointment')}</Button>
       </div>
 
       {/* KPI Cards */}
@@ -128,7 +131,11 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Graphique patients par mois */}
-        <Card title="Nouveaux Patients" subtitle="Évolution sur les 6 derniers mois" className="lg:col-span-2">
+        <Card 
+          title={t('dashboard.patient_evolution')} 
+          subtitle={t('dashboard.patient_evolution_subtitle')} 
+          className="lg:col-span-2"
+        >
           <div className="h-80 w-full mt-4">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -148,19 +155,24 @@ const Dashboard = () => {
               </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-full text-slate-400 text-sm">
-                Aucune donnée disponible pour le moment
+                {t('dashboard.no_data')}
               </div>
             )}
           </div>
         </Card>
 
         {/* Répartition par sexe */}
-        <Card title="Répartition Patients" subtitle="Par sexe">
+        <Card title={t('dashboard.patient_distribution')} subtitle={t('dashboard.patient_distribution_subtitle')}>
           <div className="space-y-4 mt-6">
             {stats?.repartition_sexe?.map((item) => {
               const total = stats.stats.total_patients || 1;
               const pct   = Math.round((item.total / total) * 100);
-              const label = item.sexe === 'M' ? '👨 Hommes' : item.sexe === 'F' ? '👩 Femmes' : '🧑 Autre';
+              const labelMap = {
+                M: t('dashboard.genders.m'),
+                F: t('dashboard.genders.f'),
+                Autre: t('dashboard.genders.other')
+              };
+              const label = `${item.sexe === 'M' ? '👨' : item.sexe === 'F' ? '👩' : '🧑'} ${labelMap[item.sexe] || item.sexe}`;
               return (
                 <div key={item.sexe}>
                   <div className="flex justify-between text-sm font-semibold text-slate-700 mb-2">
@@ -177,7 +189,7 @@ const Dashboard = () => {
               );
             })}
             {(!stats?.repartition_sexe || stats.repartition_sexe.length === 0) && (
-              <p className="text-slate-400 text-sm text-center py-8">Aucune donnée</p>
+              <p className="text-slate-400 text-sm text-center py-8">{t('dashboard.no_data')}</p>
             )}
           </div>
         </Card>
@@ -185,25 +197,25 @@ const Dashboard = () => {
 
       {/* RDV du jour */}
       <Card
-        title="Rendez-vous du jour"
-        subtitle="Liste des patients programmés aujourd'hui"
+        title={t('dashboard.appointments_today')}
+        subtitle={t('dashboard.appointments_today_subtitle')}
         headerAction={<Button variant="ghost" size="sm" icon={MoreHorizontal}></Button>}
       >
         <div className="overflow-x-auto mt-4">
           {rdv.length === 0 ? (
             <div className="text-center py-12 text-slate-400">
               <Calendar size={40} className="mx-auto mb-3 opacity-30" />
-              <p className="text-sm">Aucun rendez-vous prévu aujourd'hui</p>
+              <p className="text-sm">{t('dashboard.no_appointments')}</p>
             </div>
           ) : (
             <table className="w-full">
               <thead className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
                 <tr>
-                  <th className="px-6 py-4 text-left rounded-l-xl">Patient</th>
-                  <th className="px-6 py-4 text-left">Heure</th>
-                  <th className="px-6 py-4 text-left">Motif</th>
-                  <th className="px-6 py-4 text-left">Statut</th>
-                  <th className="px-6 py-4 text-right rounded-r-xl">Action</th>
+                  <th className="px-6 py-4 text-left rounded-l-xl">{t('dashboard.table.patient')}</th>
+                  <th className="px-6 py-4 text-left">{t('dashboard.table.time')}</th>
+                  <th className="px-6 py-4 text-left">{t('dashboard.table.reason')}</th>
+                  <th className="px-6 py-4 text-left">{t('dashboard.table.status')}</th>
+                  <th className="px-6 py-4 text-right rounded-r-xl">{t('dashboard.table.action')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -221,7 +233,7 @@ const Dashboard = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600 font-medium">
-                      {new Date(r.date_heure_debut).toLocaleTimeString('fr-MA', { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(r.date_heure_debut).toLocaleTimeString(i18n.language === 'ar' ? 'ar-MA' : 'fr-MA', { hour: '2-digit', minute: '2-digit' })}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate">{r.motif}</td>
                     <td className="px-6 py-4">

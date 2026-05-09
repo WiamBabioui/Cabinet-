@@ -20,8 +20,11 @@ import api from '../services/api';
 import CreateAppointmentModal from '../components/dashboard/CreateAppointmentModal';
 import { useAuth } from '../context/AuthContext';
 
+import { useTranslation } from 'react-i18next';
+
 const Appointments = () => {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   const [appointments, setAppointments] = useState([]);
 
   const [loading, setLoading] = useState(true);
@@ -46,7 +49,7 @@ const Appointments = () => {
       const res = await api.get(`/appointments?date=${selectedDate}`);
       setAppointments(res.data.appointments);
     } catch (err) {
-      setError('Impossible de charger les rendez-vous.');
+      setError(t('common.error_loading'));
     } finally {
       setLoading(false);
     }
@@ -57,7 +60,7 @@ const Appointments = () => {
       await api.put(`/appointments/${id}`, { statut: newStatus });
       fetchAppointments();
     } catch (err) {
-      alert('Erreur lors de la mise à jour du statut');
+      alert(t('common.error_loading'));
     }
   };
 
@@ -84,7 +87,7 @@ const Appointments = () => {
       d.setDate(monday.getDate() + i);
       const iso = d.toISOString().split('T')[0];
       return {
-        day: d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', ''),
+        day: d.toLocaleDateString(i18n.language === 'ar' ? 'ar-MA' : 'fr-FR', { weekday: 'short' }).replace('.', ''),
         date: d.getDate().toString().padStart(2, '0'),
         fullDate: iso,
         active: iso === selectedDate
@@ -118,20 +121,20 @@ const Appointments = () => {
         {/* Calendar Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-slate-800">Emploi du temps</h1>
-            <p className="text-slate-500 mt-1">Gérez vos rendez-vous quotidiens et consultations.</p>
+            <h1 className="text-3xl font-bold text-slate-800">{t('appointments.title')}</h1>
+            <p className="text-slate-500 mt-1">{t('appointments.subtitle')}</p>
           </div>
           <div className="flex gap-3">
             {user?.role === 'medecin' && (
               <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2">
-                <Plus size={18} /> Nouveau
+                <Plus size={18} /> {t('appointments.new')}
               </Button>
             )}
             <div className="flex gap-2">
               <Button variant="ghost" icon={ChevronLeft} onClick={() => navigateWeek(-1)} className="border border-slate-200 p-2 h-10 w-10"></Button>
               <div className="px-4 py-2 bg-white border border-slate-200 rounded-xl font-bold text-sm flex items-center gap-2">
                 <CalendarIcon size={18} className="text-primary" />
-                {new Date(selectedDate).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                {new Date(selectedDate).toLocaleDateString(i18n.language === 'ar' ? 'ar-MA' : 'fr-FR', { month: 'long', year: 'numeric' })}
               </div>
               <Button variant="ghost" icon={ChevronRight} onClick={() => navigateWeek(1)} className="border border-slate-200 p-2 h-10 w-10"></Button>
             </div>
@@ -200,7 +203,7 @@ const Appointments = () => {
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4 text-xs text-slate-500">
                                   <div className="flex items-center gap-1">
-                                    <Clock size={14} /> {new Date(apt.date_heure).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                    <Clock size={14} /> {new Date(apt.date_heure).toLocaleTimeString(i18n.language === 'ar' ? 'ar-MA' : 'fr-FR', { hour: '2-digit', minute: '2-digit' })}
                                   </div>
                                   <div className="flex items-center gap-1">
                                     <MapPin size={14} /> {apt.type_rdv}
@@ -216,7 +219,7 @@ const Appointments = () => {
                                       navigate(`/consultation/${apt.id}`);
                                     }}
                                   >
-                                    Consulter
+                                    {t('appointments.consult')}
                                   </Button>
                                 )}
                               </div>
@@ -235,7 +238,7 @@ const Appointments = () => {
                               className="flex items-center gap-2 text-sm font-bold text-slate-400 group-hover/btn:text-primary transition-all"
                             >
                               <Plus size={18} />
-                              Programmer ici
+                              {t('appointments.schedule_here')}
                             </button>
                           )}
                         </div>
@@ -250,7 +253,7 @@ const Appointments = () => {
       </div>
 
       <div className="space-y-6">
-        <Card title="File d'attente" subtitle="Patients en attente">
+        <Card title={t('appointments.queue')} subtitle={t('appointments.waiting_patients')}>
           <div className="space-y-4 mt-4">
             {appointments.filter(a => a.statut === 'pending').slice(0, 5).map((apt, i) => (
               <div key={apt.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-4 group/item transition-all hover:bg-white hover:shadow-sm">
@@ -259,7 +262,7 @@ const Appointments = () => {
                 </div>
                 <div className="flex-1">
                   <h5 className="text-sm font-bold text-slate-800">{apt.patient_nom} {apt.patient_prenom}</h5>
-                  <p className="text-[11px] text-slate-500 font-medium uppercase tracking-tighter">En attente</p>
+                  <p className="text-[11px] text-slate-500 font-medium uppercase tracking-tighter">{t('appointments.waiting')}</p>
                 </div>
                 <button 
                   onClick={() => handleUpdateStatus(apt.id, 'confirmed')}
@@ -271,13 +274,13 @@ const Appointments = () => {
               </div>
             ))}
             {appointments.filter(a => a.statut === 'pending').length === 0 && (
-              <p className="text-xs text-slate-400 text-center py-4">Aucun patient en attente</p>
+              <p className="text-xs text-slate-400 text-center py-4">{t('appointments.no_waiting')}</p>
             )}
           </div>
-          <Button variant="outline" className="w-full mt-6 text-sm" onClick={fetchAppointments}>Actualiser la file</Button>
+          <Button variant="outline" className="w-full mt-6 text-sm" onClick={fetchAppointments}>{t('appointments.refresh_queue')}</Button>
         </Card>
 
-        <Card title="Tâches rapides" subtitle="Rappels personnels">
+        <Card title={t('appointments.tasks')} subtitle={t('appointments.reminders')}>
           <div className="space-y-3 mt-4">
             {tasks.map(task => (
               <div key={task.id} className={`flex items-center justify-between group p-3 rounded-xl border ${
@@ -305,7 +308,7 @@ const Appointments = () => {
             <form onSubmit={addTask} className="mt-4 flex gap-2">
               <input 
                 type="text" 
-                placeholder="Nouvelle tâche..."
+                placeholder={t('appointments.new_task')}
                 className="flex-1 px-3 py-1.5 text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary/20"
                 value={newTaskTitle}
                 onChange={e => setNewTaskTitle(e.target.value)}
@@ -330,4 +333,3 @@ const Appointments = () => {
 };
 
 export default Appointments;
-

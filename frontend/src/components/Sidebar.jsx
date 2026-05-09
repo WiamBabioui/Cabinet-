@@ -7,49 +7,52 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
+import { useTranslation } from 'react-i18next';
+
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
 
   const links = [
     {
-      name: 'Dashboard',
+      name: t('sidebar.dashboard'),
       icon: LayoutDashboard,
       path: '/',
       roles: ['medecin', 'secretaire']
     },
     {
-      name: 'Patients',
+      name: t('sidebar.patients'),
       icon: Users,
       path: '/patients',
       roles: ['medecin', 'secretaire']
     },
     {
-      name: 'Rendez-vous',
+      name: t('sidebar.appointments'),
       icon: Calendar,
       path: '/appointments',
       roles: ['medecin', 'secretaire', 'patient']
     },
     {
-      name: 'Consultation',
+      name: t('sidebar.consultation'),
       icon: Stethoscope,
       path: '/consultation',
       roles: ['medecin']
     },
     {
-      name: 'Chat',
+      name: t('sidebar.chat'),
       icon: MessageSquare,
       path: '/chat',
       roles: ['medecin', 'secretaire', 'patient']
     },
     {
-      name: 'Mon Profil',
+      name: t('sidebar.profile'),
       icon: UserCog,
       path: '/profile',
       roles: ['medecin', 'secretaire']
     },
     {
-      name: 'Mon Espace',
+      name: t('sidebar.patient_portal'),
       icon: UserCircle,
       path: '/patient-portal',
       roles: ['patient']
@@ -63,16 +66,13 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     navigate('/auth/login');
   };
 
-  const roleLabel = {
-    medecin:    'Médecin',
-    secretaire: 'Secrétaire',
-    patient:    'Patient',
-  };
+  const isRtl = i18n.language === 'ar';
 
   return (
     <aside className={`
-      fixed left-0 top-0 h-screen bg-white border-r border-slate-100
-      transition-all duration-300 z-50 flex flex-col
+      fixed top-0 h-screen bg-white transition-all duration-300 z-50 flex flex-col
+      ${isRtl ? 'right-0 border-l' : 'left-0 border-r'}
+      ${isRtl ? 'border-slate-100' : 'border-slate-100'}
       ${isCollapsed ? 'w-20' : 'w-72'}
     `}>
       {/* Logo */}
@@ -105,7 +105,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                 {user.prenom} {user.nom}
               </p>
               <p className="text-xs text-slate-400">
-                {roleLabel[user.role] || user.role}
+                {t(`roles.${user.role}`)}
               </p>
             </div>
           </div>
@@ -147,7 +147,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           `}
         >
           <LogOut size={20} />
-          {!isCollapsed && <span className="font-semibold text-sm">Déconnexion</span>}
+          {!isCollapsed && <span className="font-semibold text-sm">{t('sidebar.logout')}</span>}
         </button>
       </div>
     </aside>

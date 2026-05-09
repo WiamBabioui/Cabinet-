@@ -7,24 +7,26 @@ import {
 import Badge from '../components/common/Badge';
 import Button from '../components/common/Button';
 import api from '../services/api';
+import { useTranslation } from 'react-i18next';
 
 // ─── Onglet Info Patient ──────────────────────────────────────────────────────
 const InfoTab = ({ patient }) => {
+  const { t } = useTranslation();
   const calcAge = (d) => Math.floor((Date.now() - new Date(d)) / (1000 * 60 * 60 * 24 * 365.25));
 
   const fields = [
-    { label: 'Prénom & Nom',    value: `${patient.prenom} ${patient.nom}` },
-    { label: 'Âge',             value: `${calcAge(patient.date_naissance)} ans` },
-    { label: 'Date naissance',  value: new Date(patient.date_naissance).toLocaleDateString('fr-MA') },
-    { label: 'Sexe',            value: patient.sexe === 'M' ? 'Homme' : patient.sexe === 'F' ? 'Femme' : 'Autre' },
-    { label: 'Téléphone',       value: patient.telephone },
-    { label: 'Email',           value: patient.email || '-' },
-    { label: 'CIN',             value: patient.cin || '-' },
-    { label: 'Ville',           value: patient.adresse_ville || '-' },
-    { label: 'Groupe sanguin',  value: patient.groupe_sanguin || '-' },
-    { label: 'Assurance',       value: patient.assurance_nom || '-' },
-    { label: 'N° Assurance',    value: patient.assurance_numero || '-' },
-    { label: 'N° Dossier',      value: patient.num_dossier },
+    { label: t('patient_detail.info.fullname'),    value: `${patient.prenom} ${patient.nom}` },
+    { label: t('patient_detail.info.age'),             value: t('patient_detail.info.age_years', { count: calcAge(patient.date_naissance) }) },
+    { label: t('patient_detail.info.birth_date'),  value: new Date(patient.date_naissance).toLocaleDateString() },
+    { label: t('patient_detail.info.gender'),            value: patient.sexe === 'M' ? t('dashboard.genders.m') : patient.sexe === 'F' ? t('dashboard.genders.f') : t('dashboard.genders.other') },
+    { label: t('patient_detail.info.phone'),       value: patient.telephone },
+    { label: t('patient_detail.info.email'),           value: patient.email || '-' },
+    { label: t('patient_detail.info.cin'),             value: patient.cin || '-' },
+    { label: t('patient_detail.info.city'),           value: patient.adresse_ville || '-' },
+    { label: t('patient_detail.info.blood_group'),  value: patient.groupe_sanguin || '-' },
+    { label: t('patient_detail.info.insurance'),       value: patient.assurance_nom || '-' },
+    { label: t('patient_detail.info.insurance_num'),    value: patient.assurance_numero || '-' },
+    { label: t('patient_detail.info.file_num'),      value: patient.num_dossier },
   ];
 
   return (
@@ -41,6 +43,7 @@ const InfoTab = ({ patient }) => {
 
 // ─── Onglet Dossier Médical ───────────────────────────────────────────────────
 const DossierTab = ({ dossier, patientId, onUpdate }) => {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving]   = useState(false);
   const [form, setForm]       = useState({
@@ -71,11 +74,11 @@ const DossierTab = ({ dossier, patientId, onUpdate }) => {
   };
 
   const fields = [
-    { key: 'allergies',             label: 'Allergies',               icon: AlertTriangle, color: 'text-red-500' },
-    { key: 'antecedents_perso',     label: 'Antécédents personnels',  icon: User,          color: 'text-blue-500' },
-    { key: 'antecedents_familiaux', label: 'Antécédents familiaux',   icon: Heart,         color: 'text-pink-500' },
-    { key: 'traitements_en_cours',  label: 'Traitements en cours',    icon: Pill,          color: 'text-green-500' },
-    { key: 'mode_vie',              label: 'Mode de vie',             icon: User,          color: 'text-amber-500' },
+    { key: 'allergies',             label: t('patient_detail.medical_file.allergies'),               icon: AlertTriangle, color: 'text-red-500' },
+    { key: 'antecedents_perso',     label: t('patient_detail.medical_file.perso_history'),  icon: User,          color: 'text-blue-500' },
+    { key: 'antecedents_familiaux', label: t('patient_detail.medical_file.family_history'),   icon: Heart,         color: 'text-pink-500' },
+    { key: 'traitements_en_cours',  label: t('patient_detail.medical_file.current_treatments'),    icon: Pill,          color: 'text-green-500' },
+    { key: 'mode_vie',              label: t('patient_detail.medical_file.lifestyle'),             icon: User,          color: 'text-amber-500' },
   ];
 
   return (
@@ -83,11 +86,11 @@ const DossierTab = ({ dossier, patientId, onUpdate }) => {
       <div className="flex justify-end mb-4">
         {editing ? (
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => setEditing(false)} icon={X}>Annuler</Button>
-            <Button onClick={handleSave} isLoading={saving} icon={Save}>Enregistrer</Button>
+            <Button variant="ghost" onClick={() => setEditing(false)} icon={X}>{t('common.cancel')}</Button>
+            <Button onClick={handleSave} isLoading={saving} icon={Save}>{t('common.save')}</Button>
           </div>
         ) : (
-          <Button onClick={() => setEditing(true)} icon={Edit}>Modifier le dossier</Button>
+          <Button onClick={() => setEditing(true)} icon={Edit}>{t('patient_detail.medical_file.edit')}</Button>
         )}
       </div>
 
@@ -104,11 +107,11 @@ const DossierTab = ({ dossier, patientId, onUpdate }) => {
                 onChange={(e) => setForm({ ...form, [key]: e.target.value })}
                 rows={3}
                 className="w-full text-sm p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-                placeholder={`Entrez les ${label.toLowerCase()}...`}
+                placeholder={t('patient_detail.medical_file.placeholder', { field: label.toLowerCase() })}
               />
             ) : (
               <p className="text-sm text-slate-700">
-                {form[key] || <span className="text-slate-400 italic">Non renseigné</span>}
+                {form[key] || <span className="text-slate-400 italic">{t('patient_detail.medical_file.not_specified')}</span>}
               </p>
             )}
           </div>
@@ -119,66 +122,70 @@ const DossierTab = ({ dossier, patientId, onUpdate }) => {
 };
 
 // ─── Onglet Historique ────────────────────────────────────────────────────────
-const HistoriqueTab = ({ consultations, rendezvous }) => (
-  <div className="space-y-6">
-    <div>
-      <h3 className="text-sm font-bold text-slate-700 mb-3">Dernières consultations</h3>
-      {consultations.length === 0 ? (
-        <p className="text-sm text-slate-400 italic">Aucune consultation</p>
-      ) : (
-        <div className="space-y-3">
-          {consultations.map((c) => (
-            <div key={c.id} className="p-4 border border-slate-100 rounded-xl hover:bg-slate-50">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm font-bold text-slate-700">{c.diagnostic_principal}</p>
-                  <p className="text-xs text-slate-500 mt-1">{c.anamnese?.substring(0, 100)}...</p>
-                  <p className="text-xs text-slate-400 mt-2">Dr. {c.medecin}</p>
+const HistoriqueTab = ({ consultations, rendezvous }) => {
+  const { t, i18n } = useTranslation();
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-sm font-bold text-slate-700 mb-3">{t('patient_detail.history.consultations')}</h3>
+        {consultations.length === 0 ? (
+          <p className="text-sm text-slate-400 italic">{t('patient_detail.history.no_consultations')}</p>
+        ) : (
+          <div className="space-y-3">
+            {consultations.map((c) => (
+              <div key={c.id} className="p-4 border border-slate-100 rounded-xl hover:bg-slate-50">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-slate-700">{c.diagnostic_principal}</p>
+                    <p className="text-xs text-slate-500 mt-1">{c.anamnese?.substring(0, 100)}...</p>
+                    <p className="text-xs text-slate-400 mt-2">{t('roles.medecin')}. {c.medecin}</p>
+                  </div>
+                  <span className="text-xs text-slate-400 whitespace-nowrap ml-4">
+                    {new Date(c.date_consultation).toLocaleDateString()}
+                  </span>
                 </div>
-                <span className="text-xs text-slate-400 whitespace-nowrap ml-4">
-                  {new Date(c.date_consultation).toLocaleDateString('fr-MA')}
-                </span>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-    <div>
-      <h3 className="text-sm font-bold text-slate-700 mb-3">Derniers rendez-vous</h3>
-      {rendezvous.length === 0 ? (
-        <p className="text-sm text-slate-400 italic">Aucun rendez-vous</p>
-      ) : (
-        <div className="space-y-3">
-          {rendezvous.map((r) => (
-            <div key={r.id} className="p-4 border border-slate-100 rounded-xl hover:bg-slate-50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-bold text-slate-700">{r.motif}</p>
-                  <p className="text-xs text-slate-500">{r.type_consultation}</p>
-                </div>
-                <div className="text-right">
-                  <Badge variant={r.statut === 'termine' ? 'success' : r.statut === 'annule' ? 'error' : 'info'}>
-                    {r.statut}
-                  </Badge>
-                  <p className="text-xs text-slate-400 mt-1">
-                    {new Date(r.date_heure_debut).toLocaleDateString('fr-MA')}
-                  </p>
+      <div>
+        <h3 className="text-sm font-bold text-slate-700 mb-3">{t('patient_detail.history.appointments')}</h3>
+        {rendezvous.length === 0 ? (
+          <p className="text-sm text-slate-400 italic">{t('patient_detail.history.no_appointments')}</p>
+        ) : (
+          <div className="space-y-3">
+            {rendezvous.map((r) => (
+              <div key={r.id} className="p-4 border border-slate-100 rounded-xl hover:bg-slate-50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-slate-700">{r.motif}</p>
+                    <p className="text-xs text-slate-500">{r.type_consultation}</p>
+                  </div>
+                  <div className="text-right">
+                    <Badge variant={r.statut === 'termine' ? 'success' : r.statut === 'annule' ? 'error' : 'info'}>
+                      {r.statut}
+                    </Badge>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {new Date(r.date_heure_debut).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ─── Page Principale ──────────────────────────────────────────────────────────
 const PatientDetail = () => {
   const { id }       = useParams();
   const navigate     = useNavigate();
+  const { t } = useTranslation();
   const [data, setData]     = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setTab]   = useState('info');
@@ -200,9 +207,9 @@ const PatientDetail = () => {
   );
 
   const tabs = [
-    { key: 'info',      label: 'Informations' },
-    { key: 'dossier',   label: 'Dossier médical' },
-    { key: 'historique', label: 'Historique' },
+    { key: 'info',      label: t('patient_detail.tabs.info') },
+    { key: 'dossier',   label: t('patient_detail.tabs.medical_file') },
+    { key: 'historique', label: t('patient_detail.tabs.history') },
   ];
 
   return (

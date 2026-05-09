@@ -5,15 +5,18 @@ import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import api from '../services/api';
 
-const JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+import { useTranslation } from 'react-i18next';
 
 const Profile = () => {
   const { user, login } = useAuth();
+  const { t, i18n } = useTranslation();
   const [activeTab, setTab] = useState('profil');
   const [loading, setLoading]   = useState(false);
   const [saving, setSaving]     = useState(false);
   const [success, setSuccess]   = useState('');
   const [error, setError]       = useState('');
+
+  const JOURS = t('profile.days', { returnObjects: true });
 
   const [form, setForm] = useState({
     prenom: '', nom: '', telephone: '',
@@ -26,7 +29,7 @@ const Profile = () => {
   });
 
   const [horaires, setHoraires] = useState(
-    JOURS.map((_, i) => ({
+    Array.from({ length: 7 }, (_, i) => ({
       jour_semaine: i, actif: i < 5,
       heure_debut: '09:00', heure_fin: '17:00'
     }))
@@ -51,7 +54,7 @@ const Profile = () => {
             disponible: !!m.disponible, titre: m.titre || 'Dr',
           });
           if (horairesRes.data.horaires.length > 0) {
-            const loaded = JOURS.map((_, i) => {
+            const loaded = Array.from({ length: 7 }, (_, i) => {
               const h = horairesRes.data.horaires.find(x => x.jour_semaine === i);
               return h
                 ? { jour_semaine: i, actif: true, heure_debut: h.heure_debut, heure_fin: h.heure_fin }
@@ -78,15 +81,15 @@ const Profile = () => {
       } else {
         await api.put(`/users/${user.id}`, form);
       }
-      setSuccess('Profil mis à jour avec succès !');
+      setSuccess(t('profile.profile_saved'));
     } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors de la sauvegarde');
+      setError(err.response?.data?.message || t('profile.save_error'));
     } finally { setSaving(false); }
   };
 
   const handleSaveMdp = async () => {
     if (mdpForm.nouveau_mdp !== mdpForm.confirm_mdp) {
-      setError('Les mots de passe ne correspondent pas');
+      setError(t('profile.password_mismatch'));
       return;
     }
     setSaving(true); setError(''); setSuccess('');
@@ -95,10 +98,10 @@ const Profile = () => {
         ancien_mdp: mdpForm.ancien_mdp,
         nouveau_mdp: mdpForm.nouveau_mdp,
       });
-      setSuccess('Mot de passe modifié !');
+      setSuccess(t('profile.password_changed'));
       setMdpForm({ ancien_mdp: '', nouveau_mdp: '', confirm_mdp: '' });
     } catch (err) {
-      setError(err.response?.data?.message || 'Erreur');
+      setError(err.response?.data?.message || t('common.error_loading'));
     } finally { setSaving(false); }
   };
 
@@ -106,8 +109,8 @@ const Profile = () => {
     setSaving(true); setError(''); setSuccess('');
     try {
       await api.post('/medecins/horaires', { horaires });
-      setSuccess('Horaires enregistrés !');
-    } catch { setError('Erreur lors de la sauvegarde'); }
+      setSuccess(t('profile.schedule_saved'));
+    } catch { setError(t('profile.save_error')); }
     finally { setSaving(false); }
   };
 
@@ -126,16 +129,16 @@ const Profile = () => {
   );
 
   const tabs = [
-    { key: 'profil',   label: 'Mon profil' },
-    { key: 'securite', label: 'Sécurité' },
-    ...(user?.role === 'medecin' ? [{ key: 'horaires', label: 'Mes horaires' }] : []),
+    { key: 'profil',   label: t('profile.tabs.profile') },
+    { key: 'securite', label: t('profile.tabs.security') },
+    ...(user?.role === 'medecin' ? [{ key: 'horaires', label: t('profile.tabs.schedule') }] : []),
   ];
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-800">Mon Compte</h1>
-        <p className="text-slate-500 mt-1">Gérez votre profil et vos préférences</p>
+        <h1 className="text-3xl font-bold text-slate-800">{t('profile.title')}</h1>
+        <p className="text-slate-500 mt-1">{t('profile.subtitle')}</p>
       </div>
 
       {/* Avatar */}
@@ -147,7 +150,7 @@ const Profile = () => {
           <h2 className="text-lg font-bold text-slate-800">{user?.prenom} {user?.nom}</h2>
           <p className="text-sm text-slate-500">{user?.email}</p>
           <span className="inline-block mt-1 text-xs font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded-full capitalize">
-            {user?.role}
+            {t(`roles.${user?.role}`)}
           </span>
         </div>
       </div>
@@ -172,42 +175,42 @@ const Profile = () => {
       {activeTab === 'profil' && (
         <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm space-y-5">
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Prénom" icon={User} value={form.prenom}
+            <Input label={t('profile.form.firstname')} icon={User} value={form.prenom}
               onChange={e => setForm({...form, prenom: e.target.value})} />
-            <Input label="Nom" icon={User} value={form.nom}
+            <Input label={t('profile.form.lastname')} icon={User} value={form.nom}
               onChange={e => setForm({...form, nom: e.target.value})} />
           </div>
-          <Input label="Téléphone" icon={Phone} value={form.telephone}
+          <Input label={t('profile.form.phone')} icon={Phone} value={form.telephone}
             onChange={e => setForm({...form, telephone: e.target.value})} />
 
           {user?.role === 'medecin' && (
             <>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Titre</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">{t('profile.form.title')}</label>
                 <select value={form.titre} onChange={e => setForm({...form, titre: e.target.value})}
                   className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
-                  <option value="Dr">Dr</option>
-                  <option value="Pr">Pr</option>
+                  <option value="Dr">{t('profile.title_dr') || 'Dr.'}</option>
+                  <option value="Pr">{t('profile.title_pr') || 'Pr.'}</option>
                   <option value="Dr Pr">Dr Pr</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Biographie</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">{t('profile.form.bio')}</label>
                 <textarea value={form.biographie}
                   onChange={e => setForm({...form, biographie: e.target.value})}
-                  rows={4} placeholder="Décrivez votre expérience..."
+                  rows={4} placeholder={t('profile.form.bio_placeholder')}
                   className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Durée consultation (min)</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">{t('profile.form.duration')}</label>
                   <input type="number" value={form.consultation_duree} min={15} max={120} step={5}
                     onChange={e => setForm({...form, consultation_duree: parseInt(e.target.value)})}
                     className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Tarif (MAD)</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">{t('profile.form.price')}</label>
                   <input type="number" value={form.consultation_tarif} min={0}
                     onChange={e => setForm({...form, consultation_tarif: parseFloat(e.target.value)})}
                     className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
@@ -218,14 +221,14 @@ const Profile = () => {
                   onChange={e => setForm({...form, disponible: e.target.checked})}
                   className="w-4 h-4 rounded" />
                 <label htmlFor="disponible" className="text-sm font-semibold text-slate-700">
-                  Disponible pour consultations
+                  {t('profile.form.available')}
                 </label>
               </div>
             </>
           )}
 
           <Button onClick={handleSaveProfil} isLoading={saving} icon={Save} className="w-full">
-            Enregistrer le profil
+            {t('profile.form.save_profile')}
           </Button>
         </div>
       )}
@@ -233,17 +236,17 @@ const Profile = () => {
       {/* ─── Onglet Sécurité ── */}
       {activeTab === 'securite' && (
         <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm space-y-5">
-          <Input label="Ancien mot de passe" icon={Lock} type="password"
+          <Input label={t('profile.security.old_password')} icon={Lock} type="password"
             value={mdpForm.ancien_mdp}
             onChange={e => setMdpForm({...mdpForm, ancien_mdp: e.target.value})} />
-          <Input label="Nouveau mot de passe" icon={Lock} type="password"
+          <Input label={t('profile.security.new_password')} icon={Lock} type="password"
             value={mdpForm.nouveau_mdp}
             onChange={e => setMdpForm({...mdpForm, nouveau_mdp: e.target.value})} />
-          <Input label="Confirmer le mot de passe" icon={Lock} type="password"
+          <Input label={t('profile.security.confirm_password')} icon={Lock} type="password"
             value={mdpForm.confirm_mdp}
             onChange={e => setMdpForm({...mdpForm, confirm_mdp: e.target.value})} />
           <Button onClick={handleSaveMdp} isLoading={saving} icon={Save} className="w-full">
-            Changer le mot de passe
+            {t('profile.security.change_password')}
           </Button>
         </div>
       )}
@@ -278,7 +281,7 @@ const Profile = () => {
             </div>
           ))}
           <Button onClick={handleSaveHoraires} isLoading={saving} icon={Save} className="w-full">
-            Enregistrer les horaires
+            {t('profile.schedule.save_schedule')}
           </Button>
         </div>
       )}

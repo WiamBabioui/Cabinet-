@@ -5,12 +5,14 @@ import { useAuth } from '../context/AuthContext';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import api from '../services/api';
+import { useTranslation } from 'react-i18next';
 
 const Signup = () => {
   const [role, setRole]           = useState('secretaire');
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState('');
   const [specialites, setSpecialites] = useState([]);
+  const { t } = useTranslation();
 
   const [form, setForm] = useState({
     prenom: '', nom: '', email: '', mot_de_passe: '',
@@ -42,23 +44,23 @@ const Signup = () => {
       await signup({ ...form, role });
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors de la création du compte');
+      setError(err.response?.data?.message || t('users.modal.error'));
     } finally {
       setLoading(false);
     }
   };
 
   const roles = [
-    { name: 'medecin',     label: 'Médecin',    icon: ShieldCheck },
-    { name: 'secretaire',  label: 'Secrétaire', icon: Briefcase },
-    { name: 'patient',    label: 'Patient',    icon: User },
+    { name: 'medecin',     label: t('roles.medecin'),    icon: ShieldCheck },
+    { name: 'secretaire',  label: t('roles.secretaire'), icon: Briefcase },
+    { name: 'patient',    label: t('roles.patient'),    icon: User },
   ];
 
   return (
     <div className="w-full max-w-sm mx-auto">
       <div className="mb-6">
-        <h2 className="text-3xl font-bold text-slate-800">Créer un compte</h2>
-        <p className="text-slate-500 mt-2">Rejoignez Cabinet+ pour gérer votre établissement.</p>
+        <h2 className="text-3xl font-bold text-slate-800">{t('auth.signup.title')}</h2>
+        <p className="text-slate-500 mt-2">{t('auth.signup.subtitle')}</p>
       </div>
 
       {/* Sélection du rôle */}
@@ -90,26 +92,26 @@ const Signup = () => {
 
       <form onSubmit={handleSignup} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Prénom" name="prenom" placeholder="Mohammed" icon={User}
+          <Input label={t('auth.signup.firstname')} name="prenom" placeholder="Mohammed" icon={User}
             value={form.prenom} onChange={handleChange} required />
-          <Input label="Nom" name="nom" placeholder="Alami" icon={User}
+          <Input label={t('auth.signup.lastname')} name="nom" placeholder="Alami" icon={User}
             value={form.nom} onChange={handleChange} required />
         </div>
 
-        <Input label="Email" name="email" type="email" placeholder="exemple@cabinet.ma" icon={Mail}
+        <Input label={t('auth.login.email_label')} name="email" type="email" placeholder={t('auth.login.email_placeholder')} icon={Mail}
           value={form.email} onChange={handleChange} required />
 
-        <Input label="Mot de passe" name="mot_de_passe" type="password" placeholder="••••••••" icon={Lock}
+        <Input label={t('auth.login.password_label')} name="mot_de_passe" type="password" placeholder="••••••••" icon={Lock}
           value={form.mot_de_passe} onChange={handleChange} required />
 
-        <Input label="Téléphone" name="telephone" placeholder="+212 6XX XXX XXX" icon={User}
+        <Input label={t('users.modal.phone')} name="telephone" placeholder="+212 6XX XXX XXX" icon={User}
           value={form.telephone} onChange={handleChange} />
 
         {/* Champs spécifiques au médecin */}
         {role === 'medecin' && (
           <>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Spécialité</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">{t('users.modal.specialty')}</label>
               <select
                 name="specialite_id"
                 value={form.specialite_id}
@@ -117,27 +119,27 @@ const Signup = () => {
                 required
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
-                <option value="">Sélectionner une spécialité</option>
+                <option value="">{t('users.modal.specialty_select')}</option>
                 {specialites.map(s => (
                   <option key={s.id} value={s.id}>{s.libelle}</option>
                 ))}
               </select>
             </div>
-            <Input label="Numéro d'ordre" name="num_ordre" placeholder="Ex: MA-2024-12345" icon={ShieldCheck}
+            <Input label={t('users.modal.order_num')} name="num_ordre" placeholder="Ex: MA-2024-12345" icon={ShieldCheck}
               value={form.num_ordre} onChange={handleChange} required />
           </>
         )}
 
         <Button type="submit" className="w-full" isLoading={loading} icon={ArrowRight}>
-          Créer le compte
+          {t('auth.signup.submit')}
         </Button>
       </form>
 
       <div className="mt-6 text-center">
         <p className="text-sm text-slate-500">
-          Déjà un compte ?{' '}
+          {t('auth.signup.has_account')}{' '}
           <Link to="/auth/login" className="font-bold text-primary hover:underline">
-            Se connecter
+            {t('auth.signup.login_link')}
           </Link>
         </p>
       </div>

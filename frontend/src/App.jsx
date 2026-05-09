@@ -46,55 +46,55 @@ const PrivateRoute = ({ children, allowedRoles }) => {
 function App() {
   return (
     <Routes>
-      {/* ── Routes Auth ── */}
-      <Route path="/auth" element={<AuthLayout />}>
-        <Route path="login"  element={<Login />} />
-        <Route path="signup" element={<Signup />} />
-      </Route>
+        {/* ── Routes Auth ── */}
+        <Route path="/auth" element={<AuthLayout />}>
+          <Route path="login"  element={<Login />} />
+          <Route path="signup" element={<Signup />} />
+        </Route>
 
-      {/* ── Routes Dashboard protégées ── */}
-      <Route
-        path="/"
-        element={
-          <PrivateRoute>
-            <DashboardLayout />
-          </PrivateRoute>
-        }
-      >
-        {/* Dashboard principal */}
-        <Route index element={<Dashboard />} />
+        {/* ── Routes Dashboard protégées ── */}
+        <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <DashboardLayout />
+            </PrivateRoute>
+          }
+        >
+          {/* Dashboard principal */}
+          <Route index element={<Dashboard />} />
 
-        {/* ── Dev A ── */}
-        <Route path="patients"     element={<Patients />} />
-        <Route path="patients/:id" element={<PatientDetail />} />
-        <Route path="profile"      element={<Profile />} />
+          {/* ── Dev A ── */}
+          <Route path="patients"     element={<Patients />} />
+          <Route path="patients/:id" element={<PatientDetail />} />
+          <Route path="profile"      element={<Profile />} />
 
-        {/* ── Dev B ── */}
-        <Route path="appointments" element={<Appointments />} />
-        <Route path="consultation/:appointmentId?" element={
-          <PrivateRoute allowedRoles={['medecin']}>
-            <Consultation />
-          </PrivateRoute>
-        } />
+          {/* ── Dev B ── */}
+          <Route path="appointments" element={<Appointments />} />
+          <Route path="consultation/:appointmentId?" element={
+            <PrivateRoute allowedRoles={['medecin']}>
+              <Consultation />
+            </PrivateRoute>
+          } />
 
-        <Route path="chat" element={<Chat />} />
+          <Route path="chat" element={<Chat />} />
 
-        {/* ── Rôles spécifiques ── */}
-        <Route path="assistant-dashboard" element={
-          <PrivateRoute allowedRoles={['secretaire']}>
-            <AssistantDashboard />
-          </PrivateRoute>
-        } />
-        <Route path="patient-portal" element={
-          <PrivateRoute allowedRoles={['patient']}>
-            <PatientPortal />
-          </PrivateRoute>
-        } />
-      </Route>
+          {/* ── Rôles spécifiques ── */}
+          <Route path="assistant-dashboard" element={
+            <PrivateRoute allowedRoles={['secretaire']}>
+              <AssistantDashboard />
+            </PrivateRoute>
+          } />
+          <Route path="patient-portal" element={
+            <PrivateRoute allowedRoles={['patient']}>
+              <PatientPortal />
+            </PrivateRoute>
+          } />
+        </Route>
 
-      {/* ── Redirection par défaut ── */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* ── Redirection par défaut ── */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
   );
 }
 

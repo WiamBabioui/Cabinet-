@@ -3,16 +3,23 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 const DashboardLayout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { i18n } = useTranslation();
+  const isRtl = i18n.language === 'ar';
+
+  const marginStyle = isRtl 
+    ? { marginRight: isCollapsed ? '80px' : '288px', marginLeft: 0 }
+    : { marginLeft: isCollapsed ? '80px' : '288px', marginRight: 0 };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-slate-50 flex" dir={isRtl ? 'rtl' : 'ltr'}>
       <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
       <div 
         className="flex-1 flex flex-col transition-all duration-300" 
-        style={{ marginLeft: isCollapsed ? '80px' : '288px' }}
+        style={marginStyle}
       >
         <Navbar />
         <main className="p-8 flex-1">

@@ -9,9 +9,11 @@ import Badge from '../components/common/Badge';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import api from '../services/api';
+import { useTranslation } from 'react-i18next';
 
 // ─── Modal Ajout Patient ──────────────────────────────────────────────────────
 const AddPatientModal = ({ onClose, onSuccess }) => {
+  const { t } = useTranslation();
   const [form, setForm] = useState({
     prenom: '', nom: '', date_naissance: '', sexe: 'M',
     telephone: '', email: '', cin: '', adresse_ville: '',
@@ -30,15 +32,15 @@ const AddPatientModal = ({ onClose, onSuccess }) => {
       onSuccess();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors de la création');
+      setError(err.response?.data?.message || t('patients.modal.error'));
     } finally { setLoading(false); }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-lg mx-4 p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-slate-800">Nouveau Patient</h2>
+          <h2 className="text-xl font-bold text-slate-800">{t('patients.modal.title')}</h2>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl"><X size={20} /></button>
         </div>
 
@@ -51,12 +53,12 @@ const AddPatientModal = ({ onClose, onSuccess }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Prénom *</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">{t('patients.modal.firstname')}</label>
               <input name="prenom" value={form.prenom} onChange={handleChange} required
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Nom *</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">{t('patients.modal.lastname')}</label>
               <input name="nom" value={form.nom} onChange={handleChange} required
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20" />
             </div>
@@ -64,23 +66,23 @@ const AddPatientModal = ({ onClose, onSuccess }) => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Date de naissance *</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">{t('patients.modal.birthdate')}</label>
               <input type="date" name="date_naissance" value={form.date_naissance} onChange={handleChange} required
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Sexe *</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">{t('patients.modal.gender')}</label>
               <select name="sexe" value={form.sexe} onChange={handleChange}
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20">
-                <option value="M">Masculin</option>
-                <option value="F">Féminin</option>
-                <option value="Autre">Autre</option>
+                <option value="M">{t('dashboard.genders.m')}</option>
+                <option value="F">{t('dashboard.genders.f')}</option>
+                <option value="Autre">{t('dashboard.genders.other')}</option>
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Téléphone *</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">{t('patients.modal.phone')}</label>
             <input name="telephone" value={form.telephone} onChange={handleChange} required
               placeholder="+212 6XX XXX XXX"
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20" />
@@ -88,12 +90,12 @@ const AddPatientModal = ({ onClose, onSuccess }) => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Email</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">{t('patients.modal.email') || 'Email'}</label>
               <input type="email" name="email" value={form.email} onChange={handleChange}
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">CIN</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">{t('patients.modal.cin')}</label>
               <input name="cin" value={form.cin} onChange={handleChange}
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20" />
             </div>
@@ -101,7 +103,7 @@ const AddPatientModal = ({ onClose, onSuccess }) => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Groupe sanguin</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">{t('patients.modal.blood_group')}</label>
               <select name="groupe_sanguin" value={form.groupe_sanguin} onChange={handleChange}
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20">
                 <option value="">-</option>
@@ -111,14 +113,14 @@ const AddPatientModal = ({ onClose, onSuccess }) => {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Ville</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">{t('patients.modal.city')}</label>
               <input name="adresse_ville" value={form.adresse_ville} onChange={handleChange}
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20" />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Assurance</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">{t('patients.modal.insurance')}</label>
             <input name="assurance_nom" value={form.assurance_nom} onChange={handleChange}
               placeholder="CNSS, CNOPS, Mutuelle..."
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20" />
@@ -126,10 +128,10 @@ const AddPatientModal = ({ onClose, onSuccess }) => {
 
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="ghost" className="flex-1 border border-slate-200" onClick={onClose}>
-              Annuler
+              {t('common.cancel')}
             </Button>
             <Button type="submit" className="flex-1" isLoading={loading}>
-              Créer le patient
+              {t('patients.modal.create')}
             </Button>
           </div>
         </form>
@@ -141,6 +143,7 @@ const AddPatientModal = ({ onClose, onSuccess }) => {
 // ─── Page Principale ──────────────────────────────────────────────────────────
 const Patients = () => {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   const [patients, setPatients]     = useState([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState('');
@@ -155,9 +158,9 @@ const Patients = () => {
       setPatients(res.data.patients);
       setPagination(res.data.pagination);
     } catch {
-      setError('Impossible de charger les patients');
+      setError(t('common.error_loading'));
     } finally { setLoading(false); }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const delay = setTimeout(() => fetchPatients(1, searchTerm), 400);
@@ -179,20 +182,22 @@ const Patients = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">Répertoire Patients</h1>
+          <h1 className="text-3xl font-bold text-slate-800">{t('patients.title')}</h1>
           <p className="text-slate-500 mt-1">
-            {pagination.total} patient{pagination.total > 1 ? 's' : ''} enregistré{pagination.total > 1 ? 's' : ''}
+            {pagination.total > 1 
+              ? t('patients.subtitle_plural', { count: pagination.total }) 
+              : t('patients.subtitle', { count: pagination.total })}
           </p>
         </div>
         <Button icon={Plus} onClick={() => setShowModal(true)}>
-          Ajouter un patient
+          {t('patients.add')}
         </Button>
       </div>
 
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
         <div className="mb-6">
           <Input
-            placeholder="Rechercher par nom, email ou téléphone..."
+            placeholder={t('patients.search_placeholder')}
             icon={Search}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -215,11 +220,11 @@ const Patients = () => {
               <table className="w-full">
                 <thead className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
                   <tr>
-                    <th className="px-6 py-4 text-left rounded-l-xl">Patient</th>
-                    <th className="px-6 py-4 text-left">Contact</th>
-                    <th className="px-6 py-4 text-left">N° Dossier</th>
-                    <th className="px-6 py-4 text-left">Statut</th>
-                    <th className="px-6 py-4 text-right rounded-r-xl">Actions</th>
+                    <th className="px-6 py-4 text-left rounded-l-xl">{t('patients.table.patient')}</th>
+                    <th className="px-6 py-4 text-left">{t('patients.table.contact')}</th>
+                    <th className="px-6 py-4 text-left">{t('patients.table.file_num')}</th>
+                    <th className="px-6 py-4 text-left">{t('patients.table.status')}</th>
+                    <th className="px-6 py-4 text-right rounded-r-xl">{t('patients.table.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -237,9 +242,9 @@ const Patients = () => {
                           <div>
                             <h4 className="font-bold text-slate-800 text-sm">{p.prenom} {p.nom}</h4>
                             <p className="text-xs text-slate-500">
-                              {calcAge(p.date_naissance)} ans
+                              {calcAge(p.date_naissance)} {i18n.language === 'ar' ? 'سنة' : 'ans'}
                               {' • '}
-                              {p.sexe === 'M' ? 'Homme' : p.sexe === 'F' ? 'Femme' : 'Autre'}
+                              {p.sexe === 'M' ? t('dashboard.genders.m') : p.sexe === 'F' ? t('dashboard.genders.f') : t('dashboard.genders.other')}
                               {p.groupe_sanguin && ` • ${p.groupe_sanguin}`}
                             </p>
                           </div>
@@ -277,7 +282,7 @@ const Patients = () => {
                           <button
                             onClick={() => navigate(`/patients/${p.id}`)}
                             className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
-                            title="Voir le dossier"
+                            title={t('common.view_details')}
                           >
                             <ExternalLink size={18} />
                           </button>
@@ -297,12 +302,12 @@ const Patients = () => {
                 <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
                   <Search size={40} />
                 </div>
-                <h3 className="text-lg font-bold text-slate-800">Aucun patient trouvé</h3>
+                <h3 className="text-lg font-bold text-slate-800">{t('patients.no_patients')}</h3>
                 <p className="text-slate-500 max-w-xs mx-auto mt-1">
-                  Essayez d'autres termes de recherche ou ajoutez un nouveau patient.
+                  {t('patients.no_patients_desc')}
                 </p>
                 <Button icon={Plus} className="mt-4" onClick={() => setShowModal(true)}>
-                  Ajouter un patient
+                  {t('patients.add')}
                 </Button>
               </div>
             )}
@@ -310,7 +315,7 @@ const Patients = () => {
             {pagination.pages > 1 && (
               <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-100">
                 <p className="text-sm text-slate-500">
-                  Page {pagination.page} sur {pagination.pages} ({pagination.total} patients)
+                  Page {pagination.page} / {pagination.pages} ({pagination.total} {pagination.total > 1 ? 'patients' : 'patient'})
                 </p>
                 <div className="flex gap-2">
                   <button
