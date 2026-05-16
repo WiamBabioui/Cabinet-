@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../config/db.mysql.js';
+import { createNotification } from './notification.controller.js';
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -112,6 +113,14 @@ export const login = async (req, res) => {
     );
 
     const token = generateToken(user.id);
+
+    // Notification de bienvenue
+    await createNotification(
+      user.id,
+      'info',
+      'Bienvenue',
+      `Ravi de vous revoir, ${user.prenom} !`
+    );
 
     res.json({
       message: 'Connexion réussie',

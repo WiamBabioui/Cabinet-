@@ -15,7 +15,9 @@ const notificationSchema = new mongoose.Schema({
       'message_new',
       'patient_new',
       'system_alert',
-      'system_welcome'
+      'system_welcome',
+      'info',
+      'appointment'
     ],
     required: true
   },

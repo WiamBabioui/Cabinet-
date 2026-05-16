@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import { useSocket } from './context/SocketContext';
+import api from './services/api';
 import DashboardLayout from './layouts/DashboardLayout';
 import AuthLayout from './layouts/AuthLayout';
 
@@ -24,6 +26,44 @@ import AssistantDashboard from './pages/AssistantDashboard';
 // ─── Route protégée ───────────────────────────────────────────────────────────
 const PrivateRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
+  const socket = useSocket();
+
+  useEffect(() => {
+    if (!user) return;
+    
+    const checkUpcomingAppointments = async () => {
+      try {
+        const res = await api.get('/appointments/upcoming');
+        const appointments = res.data.appointments;
+        
+        const now = new Date();
+        appointments.forEach(app => {
+          const appTime = new Date(app.date_heure_debut);
+          const diff = (appTime - now) / (1000 * 60); // minutes
+          
+          if (diff > 0 && diff <= 15) {
+            // Check if we already notified for this (simple session storage)
+            const notifiedKey = `notified_app_${app.id}`;
+            if (!sessionStorage.getItem(notifiedKey)) {
+              api.post('/notifications/create', {
+                type: 'appointment',
+                title: 'Rendez-vous imminent',
+                message: `Votre rendez-vous pour "${app.motif}" commence dans ${Math.round(diff)} minutes.`
+              }).catch(() => {});
+              sessionStorage.setItem(notifiedKey, 'true');
+            }
+          }
+        });
+      } catch (err) {
+        // ignore
+      }
+    };
+
+    const interval = setInterval(checkUpcomingAppointments, 60000); // Check every minute
+    checkUpcomingAppointments();
+
+    return () => clearInterval(interval);
+  }, [user, socket]);
 
   if (loading) {
     return (
@@ -35,7 +75,7 @@ const PrivateRoute = ({ children, allowedRoles }) => {
 
   if (!user) return <Navigate to="/auth/login" replace />;
 
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  if (allowedRoles && !allowedRoles.some(role => role.toLowerCase() === user.role?.toLowerCase().trim())) {
     return <Navigate to="/" replace />;
   }
 

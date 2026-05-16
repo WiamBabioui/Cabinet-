@@ -3,6 +3,9 @@ import Modal from './Modal';
 import Button from '../common/Button';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { Calendar, Clock, FileText, Mail, Sparkles, Zap, ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { twMerge } from 'tailwind-merge';
 
 const CreateAppointmentModal = ({ isOpen, onClose, onCreated, selectedDate, initialTime }) => {
   const { user } = useAuth();
@@ -30,10 +33,6 @@ const CreateAppointmentModal = ({ isOpen, onClose, onCreated, selectedDate, init
     setError('');
     try {
       const payload = { ...formData };
-      
-      // Combiner selectedDate et heure pour date_heure
-      // selectedDate est au format YYYY-MM-DD
-      // heure est au format HH:mm
       payload.date_heure = `${selectedDate}T${formData.heure}:00`;
 
       if (user?.role === 'medecin') {
@@ -44,75 +43,108 @@ const CreateAppointmentModal = ({ isOpen, onClose, onCreated, selectedDate, init
       onCreated();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors de la création');
+      setError(err.response?.data?.message || 'Erreur lors de la creation');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Nouveau Rendez-vous">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="p-3 bg-primary/5 rounded-xl border border-primary/10 mb-4">
-          <p className="text-sm font-bold text-primary">
-            Date sélectionnée : {new Date(selectedDate).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-          </p>
+    <Modal isOpen={isOpen} onClose={onClose} title="Planifier une seance">
+      <form onSubmit={handleSubmit} className="space-y-6 p-2">
+        <div className="p-5 bg-purple/5 rounded-[1.5rem] border border-purple/10 flex items-center gap-4 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-purple/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-purple shadow-soft border border-purple/5">
+             <Calendar size={24} strokeWidth={2.5} />
+          </div>
+          <div className="relative z-10">
+             <p className="text-[10px] font-black text-purple uppercase tracking-widest mb-1">Date Selectionnee</p>
+             <p className="text-sm font-black text-slate-700">
+               {new Date(selectedDate).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+             </p>
+          </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700">Email du Patient</label>
-          <input 
-            type="email"
-            required
-            placeholder="patient@exemple.com"
-            className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-primary/20 outline-none"
-            onChange={e => setFormData({...formData, patient_email: e.target.value})}
-            value={formData.patient_email}
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-slate-700">Heure du rendez-vous</label>
-          <input 
-            type="time"
-            required
-            className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-primary/20 outline-none"
-            value={formData.heure}
-            onChange={e => setFormData({...formData, heure: e.target.value})}
-          />
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <label className="text-xs font-black text-slate-400 uppercase tracking-widest ms-1">Email du Patient</label>
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+              <input 
+                type="email"
+                required
+                placeholder="patient@exemple.com"
+                className="w-full h-14 ps-12 pe-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 focus:bg-white focus:border-purple focus:ring-4 focus:ring-purple/5 outline-none transition-all"
+                onChange={e => setFormData({...formData, patient_email: e.target.value})}
+                value={formData.patient_email}
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest ms-1">Heure</label>
+              <div className="relative">
+                <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                <input 
+                  type="time"
+                  required
+                  className="w-full h-14 ps-12 pe-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 focus:bg-white focus:border-purple focus:ring-4 focus:ring-purple/5 outline-none transition-all"
+                  value={formData.heure}
+                  onChange={e => setFormData({...formData, heure: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest ms-1">Type</label>
+              <div className="relative">
+                <select 
+                  className="w-full h-14 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 focus:bg-white focus:border-purple focus:ring-4 focus:ring-purple/5 outline-none transition-all appearance-none"
+                  value={formData.type_rdv}
+                  onChange={e => setFormData({...formData, type_rdv: e.target.value})}
+                >
+                  <option value="suivi">Suivi</option>
+                  <option value="premiere">Premiere consultation</option>
+                  <option value="urgence">Urgence</option>
+                  <option value="teleconsultation">Teleconsultation</option>
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" size={18} />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-black text-slate-400 uppercase tracking-widest ms-1">Motif de consultation</label>
+            <div className="relative">
+              <FileText className="absolute left-4 top-4 text-slate-300" size={18} />
+              <textarea 
+                required
+                placeholder="Motif de la consultation..."
+                rows={3}
+                className="w-full ps-12 pe-4 py-4 bg-slate-50 border border-slate-100 rounded-[1.5rem] text-sm font-bold text-slate-700 focus:bg-white focus:border-purple focus:ring-4 focus:ring-purple/5 outline-none transition-all resize-none"
+                onChange={e => setFormData({...formData, motif: e.target.value})}
+                value={formData.motif}
+              />
+            </div>
+          </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700">Type de consultation</label>
-          <select 
-            className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-primary/20 outline-none"
-            value={formData.type_rdv}
-            onChange={e => setFormData({...formData, type_rdv: e.target.value})}
-          >
-            <option value="suivi">Suivi</option>
-            <option value="premiere">Première consultation</option>
-            <option value="urgence">Urgence</option>
-            <option value="teleconsultation">Téléconsultation</option>
-          </select>
+        {error && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-coral/5 border border-coral/10 rounded-xl text-coral text-xs font-bold flex items-center gap-2">
+             <Zap size={14} className="fill-coral" /> {error}
+          </motion.div>
+        )}
+
+        <div className="flex gap-3 pt-4">
+           <Button variant="outline" className="flex-1 h-14 rounded-2xl" onClick={onClose} type="button">Annuler</Button>
+           <Button type="submit" className="flex-[2] h-14 rounded-2xl shadow-glow font-black uppercase tracking-widest text-xs" isLoading={loading} icon={Zap}>
+             {loading ? 'Creation...' : 'Confirmer le RDV'}
+           </Button>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700">Motif</label>
-          <textarea 
-            required
-            placeholder="Motif de la consultation..."
-            className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-primary/20 outline-none"
-            onChange={e => setFormData({...formData, motif: e.target.value})}
-            value={formData.motif}
-          />
-        </div>
-        {error && <p className="text-red-500 text-sm">{error}</p>}
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'Création...' : 'Créer le rendez-vous'}
-        </Button>
       </form>
     </Modal>
   );
 };
 
 export default CreateAppointmentModal;
-

@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Search, Mail, LogOut, User, Settings, ChevronDown, X, Globe } from 'lucide-react';
+import { Bell, Search, Mail, LogOut, User, Settings, ChevronDown, X, Sparkles, Activity } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import LanguageSwitcher from './common/LanguageSwitcher';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // ─── Dropdown Notifications ───────────────────────────────────────────────────
 const NotificationsDropdown = ({ onClose }) => {
@@ -27,36 +29,55 @@ const NotificationsDropdown = ({ onClose }) => {
   }, []);
 
   return (
-    <div className="absolute end-0 top-14 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-        <h3 className="font-bold text-slate-800 text-sm">{t('nav.notifications')}</h3>
-        <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg">
-          <X size={16} />
+    <motion.div 
+      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+      className="absolute end-0 top-16 w-96 bg-white/80 backdrop-blur-2xl rounded-3xl shadow-glow border border-white/50 z-50 overflow-hidden"
+    >
+      <div className="flex items-center justify-between px-6 py-4 border-b border-white/30 bg-gradient-to-r from-purple/5 to-transparent">
+        <h3 className="font-black text-slate-800 text-base tracking-tight flex items-center gap-2">
+          <Bell size={16} className="text-purple" /> {t('nav.notifications')}
+        </h3>
+        <button onClick={onClose} className="p-2 hover:bg-slate-100/80 rounded-xl transition-colors">
+          <X size={18} className="text-slate-400" />
         </button>
       </div>
-      <div className="max-h-80 overflow-y-auto">
+      <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
         {loading ? (
-          <div className="p-6 text-center text-slate-400 text-sm">{t('nav.loading')}</div>
+          <div className="p-12 flex flex-col items-center justify-center gap-4">
+             <div className="w-10 h-10 border-4 border-purple/20 border-t-purple rounded-full animate-spin" />
+             <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t('nav.loading')}</p>
+          </div>
         ) : notifications.length === 0 ? (
-          <div className="p-8 text-center">
-            <Bell size={32} className="text-slate-200 mx-auto mb-3" />
-            <p className="text-sm text-slate-400">{t('nav.no_notifs')}</p>
+          <div className="p-12 text-center">
+            <div className="w-16 h-16 bg-purple/5 rounded-2xl flex items-center justify-center mx-auto mb-4 text-purple/30">
+               <Bell size={32} />
+            </div>
+            <p className="text-sm font-bold text-slate-400">{t('nav.no_notifs')}</p>
           </div>
         ) : (
-          notifications.map((n) => (
-            <div key={n.id} className={`px-4 py-3 hover:bg-slate-50 border-b border-slate-50 ${!n.lu ? 'bg-primary/5' : ''}`}>
-              <p className="text-sm font-semibold text-slate-700">{n.titre}</p>
-              <p className="text-xs text-slate-400 mt-0.5">{n.corps}</p>
-            </div>
-          ))
+          <div className="divide-y divide-slate-100/50">
+            {notifications.map((n) => (
+              <div key={n._id} className={`px-6 py-4 hover:bg-purple/5 transition-all cursor-pointer group ${!n.isRead ? 'bg-purple/5' : ''}`}>
+                <div className="flex items-start gap-3">
+                  <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${!n.isRead ? 'bg-purple shadow-glow' : 'bg-slate-200'}`} />
+                  <div>
+                    <p className="text-sm font-bold text-slate-800 group-hover:text-purple transition-colors">{n.title}</p>
+                    <p className="text-xs font-medium text-slate-500 mt-1 leading-relaxed">{n.message}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
-      <div className="px-4 py-3 border-t border-slate-100">
-        <button className="text-xs font-semibold text-primary hover:underline w-full text-center">
+      <div className="px-6 py-4 border-t border-white/30 bg-slate-50/50 text-center">
+        <button className="text-xs font-black text-purple uppercase tracking-widest hover:text-purple/70 transition-colors">
           {t('nav.view_all')}
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
@@ -82,56 +103,69 @@ const MessagesDropdown = ({ onClose }) => {
   }, []);
 
   return (
-    <div className="absolute end-0 top-14 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-        <h3 className="font-bold text-slate-800 text-sm">{t('nav.recent_messages')}</h3>
-        <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg">
-          <X size={16} />
+    <motion.div 
+      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+      className="absolute end-0 top-16 w-96 bg-white/80 backdrop-blur-2xl rounded-3xl shadow-glow border border-white/50 z-50 overflow-hidden"
+    >
+      <div className="flex items-center justify-between px-6 py-4 border-b border-white/30 bg-gradient-to-r from-emerald/5 to-transparent">
+        <h3 className="font-black text-slate-800 text-base tracking-tight flex items-center gap-2">
+          <Mail size={16} className="text-emerald" /> {t('nav.recent_messages')}
+        </h3>
+        <button onClick={onClose} className="p-2 hover:bg-slate-100/80 rounded-xl transition-colors">
+          <X size={18} className="text-slate-400" />
         </button>
       </div>
-      <div className="max-h-80 overflow-y-auto">
+      <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
         {loading ? (
-          <div className="p-6 text-center text-slate-400 text-sm">{t('nav.loading')}</div>
+          <div className="p-12 flex flex-col items-center justify-center gap-4">
+             <div className="w-10 h-10 border-4 border-emerald/20 border-t-emerald rounded-full animate-spin" />
+          </div>
         ) : conversations.length === 0 ? (
-          <div className="p-8 text-center">
-            <Mail size={32} className="text-slate-200 mx-auto mb-3" />
-            <p className="text-sm text-slate-400">{t('nav.no_messages')}</p>
+          <div className="p-12 text-center">
+            <div className="w-16 h-16 bg-emerald/5 rounded-2xl flex items-center justify-center mx-auto mb-4 text-emerald/30">
+               <Mail size={32} />
+            </div>
+            <p className="text-sm font-bold text-slate-400">{t('nav.no_messages')}</p>
           </div>
         ) : (
-          conversations.map((conv) => (
-            <button
-              key={conv.id}
-              onClick={() => { navigate('/chat'); onClose(); }}
-              className="w-full px-4 py-3 hover:bg-slate-50 border-b border-slate-50 flex items-center gap-3 text-left"
-            >
-              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold text-xs overflow-hidden shrink-0">
-                {conv.other_user.photo_url ? (
-                  <img src={conv.other_user.photo_url} alt="" className="w-full h-full object-cover" />
-                ) : conv.other_user.prenom.charAt(0)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-center">
-                  <p className="text-sm font-bold text-slate-800 truncate">{conv.other_user.prenom} {conv.other_user.nom}</p>
-                  <span className="text-[10px] text-slate-400 shrink-0">{new Date(conv.last_msg_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+          <div className="divide-y divide-slate-100/50">
+            {conversations.map((conv) => (
+              <button
+                key={conv.id}
+                onClick={() => { navigate('/chat'); onClose(); }}
+                className="w-full px-6 py-4 hover:bg-emerald/5 border-b border-slate-50 flex items-center gap-4 text-left transition-all group"
+              >
+                <div className="w-12 h-12 bg-gradient-to-br from-emerald to-mint rounded-2xl flex items-center justify-center text-indigo font-black text-xs overflow-hidden shrink-0 group-hover:scale-110 transition-transform duration-300">
+                  {conv.other_user.photo_url ? (
+                    <img src={conv.other_user.photo_url} alt="" className="w-full h-full object-cover" />
+                  ) : conv.other_user.prenom.charAt(0)}
                 </div>
-                <p className="text-xs text-slate-500 truncate">{conv.dernier_message}</p>
-              </div>
-              {conv.unread_count > 0 && (
-                <div className="w-2 h-2 bg-blue-500 rounded-full shrink-0"></div>
-              )}
-            </button>
-          ))
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center mb-0.5">
+                    <p className="text-sm font-black text-slate-800 truncate leading-none group-hover:text-emerald transition-colors">{conv.other_user.prenom} {conv.other_user.nom}</p>
+                    <span className="text-[10px] font-bold text-slate-400 shrink-0 uppercase tracking-tighter">{new Date(conv.updatedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                  </div>
+                  <p className="text-xs font-medium text-slate-500 truncate leading-relaxed">{conv.lastMessage?.text}</p>
+                </div>
+                {conv.unread_count > 0 && (
+                  <div className="w-2.5 h-2.5 bg-emerald rounded-full shrink-0 shadow-glow-emerald ring-4 ring-emerald/10 animate-pulse"></div>
+                )}
+              </button>
+            ))}
+          </div>
         )}
       </div>
-      <div className="px-4 py-3 border-t border-slate-100">
+      <div className="px-6 py-4 border-t border-white/30 bg-slate-50/50 text-center">
         <button 
           onClick={() => { navigate('/chat'); onClose(); }}
-          className="text-xs font-semibold text-primary hover:underline w-full text-center"
+          className="text-xs font-black text-emerald uppercase tracking-widest hover:text-emerald/70 transition-colors"
         >
           {t('nav.open_chat')}
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
@@ -141,69 +175,72 @@ const ProfileDropdown = ({ user, onClose, onLogout }) => {
   const { t } = useTranslation();
 
   return (
-    <div className="absolute end-0 top-14 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden">
-      {/* En-tête profil */}
-      <div className="px-4 py-4 bg-gradient-to-br from-primary/5 to-primary/10 border-b border-slate-100">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-primary text-white rounded-xl flex items-center justify-center font-bold text-lg">
+    <motion.div 
+      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+      className="absolute end-0 top-16 w-72 bg-white/80 backdrop-blur-2xl rounded-3xl shadow-glow border border-white/50 z-50 overflow-hidden"
+    >
+      <div className="p-6 bg-gradient-to-br from-purple/10 via-coral/5 to-transparent border-b border-white/30">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-gradient-to-tr from-coral to-gold rounded-2xl flex items-center justify-center font-black text-white text-xl shadow-glow">
             {user?.prenom?.charAt(0)}{user?.nom?.charAt(0)}
           </div>
-          <div>
-            <p className="font-bold text-slate-800 text-sm">
+          <div className="min-w-0">
+            <p className="font-black text-slate-800 text-base truncate leading-none mb-1">
               {user?.prenom} {user?.nom}
             </p>
-            <p className="text-xs text-slate-500">{user?.email}</p>
-            <span className="inline-block mt-1 text-xs font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-              {t(`roles.${user?.role}`)}
-            </span>
+            <p className="text-[11px] font-bold text-slate-400 truncate uppercase tracking-wider">{user?.email}</p>
+            <div className="flex items-center gap-1.5 mt-2">
+               <div className="w-1.5 h-1.5 bg-emerald rounded-full shadow-glow-emerald" />
+               <span className="text-[10px] font-black text-purple uppercase tracking-widest">
+                 {t(`roles.${user?.role}`)}
+               </span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="p-2">
+      <div className="p-3">
         <button
           onClick={() => { navigate('/profile'); onClose(); }}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-50 rounded-xl transition-colors"
+          className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-600 hover:bg-purple/5 hover:text-purple rounded-2xl transition-all"
         >
-          <User size={16} className="text-slate-400" />
+          <User size={18} className="text-slate-400" />
           {t('nav.profile')}
         </button>
         <button
           onClick={() => { navigate('/profile'); onClose(); }}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-50 rounded-xl transition-colors"
+          className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-600 hover:bg-purple/5 hover:text-purple rounded-2xl transition-all"
         >
-          <Settings size={16} className="text-slate-400" />
+          <Settings size={18} className="text-slate-400" />
           {t('nav.settings')}
         </button>
       </div>
 
-      <div className="p-2 border-t border-slate-100">
+      <div className="p-3 border-t border-white/30">
         <button
           onClick={onLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+          className="w-full flex items-center gap-3 px-4 py-3 text-sm font-black text-coral hover:bg-coral/10 rounded-2xl transition-all uppercase tracking-widest group"
         >
-          <LogOut size={16} />
+          <motion.div whileHover={{ x: -3 }}><LogOut size={18} strokeWidth={2.5} /></motion.div>
           {t('nav.logout')}
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 };
-
-// ─── Dropdown Langues ────────────────────────────────────────────────────────
-// Redundant LanguageDropdown removed. Using shared LanguageSwitcher instead.
 
 // ─── Navbar Principale ────────────────────────────────────────────────────────
 const Navbar = () => {
   const { user, logout } = useAuth();
+  const socket = useSocket();
   const navigate = useNavigate();
   const { t } = useTranslation();
 
   const [showNotifs,   setShowNotifs]   = useState(false);
   const [showMessages, setShowMessages] = useState(false);
   const [showProfile,  setShowProfile]  = useState(false);
-  const [showLanguage, setShowLanguage] = useState(false);
   const [notifCount,   setNotifCount]   = useState(0);
   const [msgCount,     setMsgCount]     = useState(0);
 
@@ -215,30 +252,46 @@ const Navbar = () => {
           api.get('/chat/conversations')
         ]);
         setNotifCount(notifRes.data.unread || 0);
-        
         const totalUnreadMsg = chatRes.data.conversations.reduce((acc, conv) => acc + (conv.unread_count || 0), 0);
         setMsgCount(totalUnreadMsg);
       } catch (err) {
         console.error('Failed to fetch navbar counts');
       }
     };
+    
+    if (user) {
+      fetchCounts();
+    }
+  }, [user]);
 
-    fetchCounts();
-    // Poll every minute for updates
-    const interval = setInterval(fetchCounts, 60000);
-    return () => clearInterval(interval);
-  }, []);
+  useEffect(() => {
+    if (socket) {
+      socket.on('new_notification', (notif) => {
+        setNotifCount(prev => prev + 1);
+        // Optionnel: jouer un son ou afficher un toast
+      });
+
+      socket.on('receive_message', (msg) => {
+        if (location.pathname !== '/chat') {
+          setMsgCount(prev => prev + 1);
+        }
+      });
+
+      return () => {
+        socket.off('new_notification');
+        socket.off('receive_message');
+      };
+    }
+  }, [socket]);
 
   const navRef = useRef(null);
 
-  // Fermer dropdowns si clic extérieur
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (navRef.current && !navRef.current.contains(e.target)) {
         setShowNotifs(false);
         setShowMessages(false);
         setShowProfile(false);
-        setShowLanguage(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -250,128 +303,98 @@ const Navbar = () => {
     navigate('/auth/login');
   };
 
-  const toggleNotifs = () => {
-    setShowNotifs(!showNotifs);
-    setShowMessages(false);
-    setShowProfile(false);
-  };
-
-  const toggleMessages = () => {
-    setShowMessages(!showMessages);
-    setShowNotifs(false);
-    setShowProfile(false);
-  };
-
-  const toggleProfile = () => {
-    setShowProfile(!showProfile);
-    setShowNotifs(false);
-    setShowMessages(false);
-    setShowLanguage(false);
-  };
-
-  const toggleLanguage = () => {
-    setShowLanguage(!showLanguage);
-    setShowNotifs(false);
-    setShowMessages(false);
-    setShowProfile(false);
-  };
+  const NavIconButton = ({ onClick, active, children, count, color = 'purple' }) => (
+    <motion.button
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      onClick={onClick}
+      className={`p-3 rounded-2xl transition-all duration-300 relative group ${
+        active
+          ? `bg-gradient-to-br from-${color} to-${color}/70 text-white shadow-lg`
+          : 'text-slate-500 hover:bg-white/50 hover:text-slate-800 hover:shadow-glass'
+      }`}
+    >
+      {children}
+      {count > 0 && (
+        <span className={`absolute -top-1 -end-1 w-5 h-5 bg-coral text-white text-[10px] font-black rounded-full flex items-center justify-center ring-2 ring-white shadow-sm`}>
+          {count}
+        </span>
+      )}
+    </motion.button>
+  );
 
   return (
-    <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-8 sticky top-0 z-40">
-
-      {/* Barre de recherche */}
-      <div className="flex items-center gap-4 bg-slate-50 px-4 py-2.5 rounded-2xl w-full max-w-md border border-slate-100 transition-all focus-within:ring-4 focus-within:ring-primary/10 focus-within:border-primary/30">
-        <Search size={20} className="text-slate-400" />
+    <header className="h-20 bg-white/60 backdrop-blur-xl border-b border-white/30 flex items-center justify-between px-8 sticky top-0 z-40 shadow-glass">
+      {/* Search Bar */}
+      <div className="flex items-center gap-4 bg-white/40 backdrop-blur-md px-5 py-3 rounded-2xl w-full max-w-md border border-white/50 transition-all duration-300 focus-within:bg-white/80 focus-within:ring-4 focus-within:ring-purple/15 focus-within:border-purple/30 focus-within:shadow-glass group">
+        <Search size={18} className="text-slate-400 group-focus-within:text-purple transition-colors flex-shrink-0" strokeWidth={2.5} />
         <input
           type="text"
           placeholder={t('nav.search')}
-          className="bg-transparent border-none outline-none text-sm w-full placeholder:text-slate-400"
+          className="bg-transparent border-none outline-none text-sm font-bold w-full placeholder:text-slate-400 placeholder:font-medium text-slate-700"
         />
+        <div className="hidden sm:flex items-center gap-1 px-2 py-0.5 bg-slate-100/80 rounded-lg text-[10px] font-black text-slate-400 uppercase tracking-widest border border-slate-200/50 flex-shrink-0">
+           ⌘ K
+        </div>
       </div>
 
-      {/* Actions droite */}
-      <div className="flex items-center gap-4" ref={navRef}>
-
-        {/* ── Messages ── */}
-        <div className="relative hidden md:block">
-          <button
-            onClick={toggleMessages}
-            className={`relative p-2.5 rounded-xl transition-all ${
-              showMessages ? 'bg-primary/10 text-primary' : 'text-slate-500 hover:bg-slate-50'
-            }`}
-          >
-            <Mail size={22} />
-            {msgCount > 0 && (
-              <span className="absolute -top-1 -end-1 w-5 h-5 bg-blue-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white">
-                {msgCount}
-              </span>
-            )}
-            {msgCount === 0 && (
-              <span className="absolute top-2 end-2 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white" />
-            )}
-          </button>
-          {showMessages && (
-            <MessagesDropdown onClose={() => setShowMessages(false)} />
-          )}
-        </div>
-
-        {/* ── Notifications ── */}
-        <div className="relative hidden md:block">
-          <button
-            onClick={toggleNotifs}
-            className={`relative p-2.5 rounded-xl transition-all ${
-              showNotifs ? 'bg-primary/10 text-primary' : 'text-slate-500 hover:bg-slate-50'
-            }`}
-          >
-            <Bell size={22} />
-            {notifCount > 0 && (
-              <span className="absolute -top-1 -end-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white">
-                {notifCount}
-              </span>
-            )}
-            {notifCount === 0 && (
-              <span className="absolute top-2 end-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
-            )}
-          </button>
-          {showNotifs && (
-            <NotificationsDropdown onClose={() => setShowNotifs(false)} />
-          )}
-        </div>
-
-        {/* ── Langues ── */}
-        <div className="relative hidden sm:block">
-          <LanguageSwitcher />
-        </div>
-
-        <div className="h-10 w-[1px] bg-slate-200 hidden md:block" />
-
-        {/* ── Profil utilisateur ── */}
+      {/* Right Actions */}
+      <div className="flex items-center gap-2" ref={navRef}>
+        
+        {/* Messages */}
         <div className="relative">
-          <button
-            onClick={toggleProfile}
-            className={`flex items-center gap-3 p-2 pe-3 rounded-2xl transition-all ${
-              showProfile ? 'bg-primary/5 ring-2 ring-primary/20' : 'hover:bg-slate-50'
+          <NavIconButton onClick={() => { setShowMessages(!showMessages); setShowNotifs(false); setShowProfile(false); }} active={showMessages} count={msgCount} color="emerald">
+            <Mail size={22} strokeWidth={showMessages ? 2.5 : 2} />
+          </NavIconButton>
+          <AnimatePresence>
+            {showMessages && <MessagesDropdown onClose={() => setShowMessages(false)} />}
+          </AnimatePresence>
+        </div>
+
+        {/* Notifications */}
+        <div className="relative">
+          <NavIconButton onClick={() => { setShowNotifs(!showNotifs); setShowMessages(false); setShowProfile(false); }} active={showNotifs} count={notifCount} color="purple">
+            <Bell size={22} strokeWidth={showNotifs ? 2.5 : 2} />
+          </NavIconButton>
+          <AnimatePresence>
+            {showNotifs && <NotificationsDropdown onClose={() => setShowNotifs(false)} />}
+          </AnimatePresence>
+        </div>
+
+        <div className="w-[1px] h-8 bg-slate-200/50 mx-2 hidden md:block" />
+
+        {/* Language & Profile */}
+        <div className="flex items-center gap-2">
+          <div className="hidden sm:block">
+            <LanguageSwitcher />
+          </div>
+          
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            onClick={() => { setShowProfile(!showProfile); setShowNotifs(false); setShowMessages(false); }}
+            className={`flex items-center gap-3 p-1.5 pe-4 rounded-2xl transition-all duration-300 group ${
+              showProfile ? 'bg-purple/10 ring-4 ring-purple/10 border border-purple/20' : 'bg-white/30 hover:bg-white/60 border border-white/50 hover:border-white/80 hover:shadow-glass'
             }`}
           >
-            {/* Avatar */}
-            <div className="w-10 h-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-bold text-sm border-2 border-primary/20">
+            <div className="w-10 h-10 bg-gradient-to-tr from-coral to-gold rounded-xl flex items-center justify-center font-black text-white text-sm shadow-glow transition-transform duration-300 group-hover:scale-110">
               {user?.prenom?.charAt(0)}{user?.nom?.charAt(0)}
             </div>
-            {/* Nom et rôle */}
-            <div className="hidden sm:block text-left">
-              <h4 className="text-sm font-bold text-slate-800 leading-none">
+            <div className="hidden lg:block text-left">
+              <p className="text-sm font-black text-slate-800 leading-none mb-1 flex items-center gap-2">
                 {user?.prenom} {user?.nom}
-              </h4>
-              <span className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">
-                {t(`roles.${user?.role}`)}
-              </span>
+                <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${showProfile ? 'rotate-180' : ''}`} />
+              </p>
+              <div className="flex items-center gap-1.5">
+                 <motion.div animate={{ scale: [1, 1.2, 1], opacity: [1, 0.5, 1] }} transition={{ repeat: Infinity, duration: 2 }} className="w-1.5 h-1.5 rounded-full bg-emerald" />
+                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                   {t(`roles.${user?.role}`)}
+                 </span>
+              </div>
             </div>
-            <ChevronDown
-              size={16}
-              className={`text-slate-400 transition-transform ${showProfile ? 'rotate-180' : ''}`}
-            />
-          </button>
+          </motion.button>
+        </div>
 
+        <AnimatePresence>
           {showProfile && (
             <ProfileDropdown
               user={user}
@@ -379,7 +402,7 @@ const Navbar = () => {
               onLogout={handleLogout}
             />
           )}
-        </div>
+        </AnimatePresence>
       </div>
     </header>
   );

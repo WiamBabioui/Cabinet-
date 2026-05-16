@@ -293,6 +293,9 @@ export const getUpcoming = async (req, res) => {
     if (role === 'medecin') { 
       where += ' AND m.utilisateur_id = ?'; 
       params.push(id); 
+    } else if (role === 'patient') {
+      where += ' AND p.email = ?';
+      params.push(req.user.email);
     }
 
     const [rows] = await pool.execute(

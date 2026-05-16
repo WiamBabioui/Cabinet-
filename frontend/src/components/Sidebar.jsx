@@ -3,11 +3,12 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Calendar, MessageSquare,
   Stethoscope, LogOut, ChevronLeft, ChevronRight,
-  ShieldCheck, UserCircle, UserCog
+  ShieldCheck, UserCircle, UserCog, HeartPulse
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-
 import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence } from 'framer-motion';
+import { twMerge } from 'tailwind-merge';
 
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const { user, logout } = useAuth();
@@ -59,7 +60,10 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     },
   ];
 
-  const filteredLinks = links.filter(link => link.roles.includes(user?.role));
+  const userRole = user?.role?.toLowerCase().trim();
+  const filteredLinks = links.filter(link => 
+    link.roles.some(role => role.toLowerCase() === userRole)
+  );
 
   const handleLogout = () => {
     logout();
@@ -69,89 +73,141 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const isRtl = i18n.language === 'ar';
 
   return (
-    <aside className={`
-      fixed top-0 h-screen bg-white transition-all duration-300 z-50 flex flex-col
-      ${isRtl ? 'right-0 border-l' : 'left-0 border-r'}
-      ${isRtl ? 'border-slate-100' : 'border-slate-100'}
-      ${isCollapsed ? 'w-20' : 'w-72'}
-    `}>
-      {/* Logo */}
-      <div className="p-6 flex items-center justify-between">
-        {!isCollapsed && (
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/30">
-              <ShieldCheck size={24} />
-            </div>
-            <span className="font-bold text-xl text-slate-800 truncate">Cabinet+</span>
-          </div>
-        )}
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-2 hover:bg-slate-50 rounded-lg text-slate-400 transition-colors"
-        >
-          {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-        </button>
+    <aside className={twMerge(
+      "fixed top-4 bottom-4 transition-all duration-500 ease-in-out z-50 flex flex-col rounded-3xl overflow-hidden glass-sidebar",
+      isRtl ? 'right-4' : 'left-4',
+      isCollapsed ? 'w-20' : 'w-72'
+    )}>
+      {/* Logo Section */}
+      <div className="p-6 flex items-center justify-between overflow-hidden relative">
+        <AnimatePresence mode="wait">
+          {!isCollapsed && (
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="flex items-center gap-3 z-10"
+            >
+              <div className="w-10 h-10 bg-gradient-to-tr from-purple to-mint rounded-2xl flex items-center justify-center text-indigo shadow-glow-emerald">
+                <HeartPulse size={22} strokeWidth={2.5} />
+              </div>
+              <span className="font-black text-2xl text-slate-800 dark:text-white tracking-tighter">
+                Cabinet<span className="text-purple">+</span>
+              </span>
+            </motion.div>
+          )}
+          {isCollapsed && (
+             <motion.div 
+               initial={{ opacity: 0, scale: 0.5 }}
+               animate={{ opacity: 1, scale: 1 }}
+               className="w-10 h-10 bg-gradient-to-tr from-purple to-mint text-indigo rounded-2xl flex items-center justify-center mx-auto shadow-glow-emerald z-10"
+             >
+               <HeartPulse size={22} strokeWidth={2.5} />
+             </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Infos utilisateur */}
-      {!isCollapsed && user && (
-        <div className="mx-4 mb-4 p-3 bg-slate-50 rounded-xl">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0">
-              {user.prenom?.charAt(0)}{user.nom?.charAt(0)}
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-slate-700 truncate">
-                {user.prenom} {user.nom}
-              </p>
-              <p className="text-xs text-slate-400">
-                {t(`roles.${user.role}`)}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Collapse Toggle */}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className={twMerge(
+          "absolute top-8 w-6 h-12 bg-white/40 dark:bg-indigo/40 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-full shadow-soft flex items-center justify-center text-slate-500 hover:text-purple hover:border-purple/50 transition-all duration-300 z-50",
+          isRtl ? 'left-[-12px]' : 'right-[-12px]'
+        )}
+      >
+        {isCollapsed ? <ChevronRight size={14} strokeWidth={3} /> : <ChevronLeft size={14} strokeWidth={3} />}
+      </button>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-4 space-y-1.5 mt-2 overflow-y-auto custom-scrollbar relative z-10">
         {filteredLinks.map((link) => (
           <NavLink
             key={link.name}
             to={link.path}
             end={link.path === '/'}
-            className={({ isActive }) => `
-              flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
-              transition-all duration-200
-              ${isActive
-                ? 'bg-primary text-white shadow-md shadow-primary/25'
-                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-              }
-              ${isCollapsed ? 'justify-center px-0' : ''}
-            `}
+            className={({ isActive }) => twMerge(
+              "flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all duration-300 relative group overflow-hidden",
+              isActive ? 'text-white shadow-lg shadow-purple/20' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white',
+              isCollapsed ? 'justify-center px-0' : ''
+            )}
             title={isCollapsed ? link.name : ''}
           >
-            <link.icon size={20} className="min-w-[20px]" />
-            {!isCollapsed && <span>{link.name}</span>}
+            {({ isActive }) => (
+              <>
+                {isActive && (
+                  <motion.div
+                    layoutId="sidebar-active-bg"
+                    className="absolute inset-0 bg-gradient-to-r from-purple to-[#9b82ff] rounded-2xl"
+                    initial={false}
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+                <div className="relative z-10 flex items-center gap-4 w-full">
+                  <motion.div whileHover={{ scale: 1.1, rotate: isActive ? 0 : 10 }} className={isCollapsed ? "mx-auto" : ""}>
+                    <link.icon 
+                      size={20} 
+                      strokeWidth={isActive ? 2.5 : 2}
+                      className={isActive ? 'text-white' : 'group-hover:text-purple transition-colors'} 
+                    />
+                  </motion.div>
+                  {!isCollapsed && <span className="tracking-tight whitespace-nowrap">{link.name}</span>}
+                </div>
+              </>
+            )}
           </NavLink>
         ))}
       </nav>
 
-      {/* Bouton Logout */}
-      <div className="p-4 border-t border-slate-100">
-        <button
-          onClick={handleLogout}
-          className={`
-            w-full flex items-center gap-3 p-3
-            text-red-500 hover:bg-red-50 rounded-xl transition-all
-            ${isCollapsed ? 'justify-center' : ''}
-          `}
-        >
-          <LogOut size={20} />
-          {!isCollapsed && <span className="font-semibold text-sm">{t('sidebar.logout')}</span>}
-        </button>
+      {/* Bottom Profile Section */}
+      <div className="p-4 mt-auto relative z-10">
+        <div className={twMerge(
+          "p-4 bg-white/30 dark:bg-indigo/30 backdrop-blur-md rounded-3xl transition-all duration-300 border border-white/40 dark:border-white/10 shadow-glass",
+          isCollapsed ? 'flex justify-center flex-col items-center gap-4' : 'block'
+        )}>
+          {!isCollapsed ? (
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-gradient-to-tr from-coral to-gold rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-glow flex-shrink-0 hover:scale-110 transition-transform cursor-pointer">
+                {user?.prenom?.charAt(0)}{user?.nom?.charAt(0)}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-black text-slate-800 dark:text-white truncate leading-none mb-1.5">
+                  {user?.prenom} {user?.nom}
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <motion.div 
+                    animate={{ scale: [1, 1.2, 1], opacity: [1, 0.5, 1] }} 
+                    transition={{ repeat: Infinity, duration: 2 }} 
+                    className="w-1.5 h-1.5 rounded-full bg-emerald" 
+                  />
+                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                    {userRole ? t(`roles.${userRole}`) : '...'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="w-10 h-10 bg-gradient-to-tr from-coral to-gold rounded-xl flex items-center justify-center text-white font-black text-xs shadow-glow cursor-pointer">
+               {user?.prenom?.charAt(0)}{user?.nom?.charAt(0)}
+            </div>
+          )}
+
+          <button
+            onClick={handleLogout}
+            className={twMerge(
+              "w-full flex items-center gap-3 mt-4 p-3 text-coral hover:bg-coral/10 rounded-2xl transition-all font-bold text-xs uppercase tracking-widest group",
+              isCollapsed ? 'justify-center p-2 mt-0' : ''
+            )}
+          >
+            <motion.div whileHover={{ x: -3 }}>
+              <LogOut size={isCollapsed ? 18 : 16} strokeWidth={2.5} className="group-hover:text-rose-500" />
+            </motion.div>
+            {!isCollapsed && <span>{t('sidebar.logout')}</span>}
+          </button>
+        </div>
       </div>
     </aside>
   );
 };
 
-export default Sidebar;
+export default Sidebar;

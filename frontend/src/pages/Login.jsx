@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, User, ArrowRight, AlertCircle } from 'lucide-react';
+import { Mail, Lock, ArrowRight, AlertCircle, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
-
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
 
 const Login = () => {
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
 
@@ -24,12 +25,9 @@ const Login = () => {
 
     try {
       const user = await login(email, password);
-
-      // Redirection selon le rôle
       if (user.role === 'medecin') navigate('/');
       else if (user.role === 'secretaire') navigate('/assistant-dashboard');
       else navigate('/');
-
     } catch (err) {
       setError(err.response?.data?.message || t('auth.login.error'));
     } finally {
@@ -38,22 +36,49 @@ const Login = () => {
   };
 
   return (
-    <div className="w-full max-w-sm mx-auto">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-slate-800">{t('auth.login.title')}</h2>
-        <p className="text-slate-500 mt-2">{t('auth.login.subtitle')}</p>
+    <motion.div 
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: 0.2, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      className="w-full"
+    dir={t('dir') || 'ltr'}
+    >
+      {/* Header */}
+      <div className="mb-10">
+        <div className="flex items-center gap-2 mb-3">
+          <motion.div
+            animate={{ rotate: [0, 15, -10, 0] }}
+            transition={{ duration: 2, repeat: Infinity, repeatDelay: 4 }}
+          >
+            <Sparkles size={16} className="text-gold" />
+          </motion.div>
+          <span className="text-xs font-black text-purple uppercase tracking-[0.2em]">Bienvenue</span>
+        </div>
+        <h2 className="text-4xl font-black text-slate-800 tracking-tight mb-3 leading-tight">
+          {t('auth.login.title')}
+        </h2>
+        <p className="text-slate-500 text-base font-medium">
+          {t('auth.login.subtitle')}
+        </p>
       </div>
 
-      {/* Message d'erreur */}
+      {/* Error alert */}
       {error && (
-        <div className="flex items-center gap-3 p-4 mb-6 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
-          <AlertCircle size={18} className="flex-shrink-0" />
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95, y: -10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="flex items-center gap-3 p-4 mb-8 bg-coral/5 border border-coral/20 rounded-2xl text-coral text-sm font-semibold"
+        >
+          <div className="w-8 h-8 bg-coral/10 rounded-full flex items-center justify-center flex-shrink-0">
+            <AlertCircle size={18} />
+          </div>
           {error}
-        </div>
+        </motion.div>
       )}
 
       <form onSubmit={handleLogin} className="space-y-5">
         <Input
+          id="login-email"
           label={t('auth.login.email_label')}
           placeholder={t('auth.login.email_placeholder')}
           icon={Mail}
@@ -61,41 +86,72 @@ const Login = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          autoComplete="email"
         />
-        <Input
-          label={t('auth.login.password_label')}
-          placeholder="••••••••"
-          icon={Lock}
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+        
+        <div className="relative group">
+          <Input
+            id="login-password"
+            label={t('auth.login.password_label')}
+            placeholder="********"
+            icon={Lock}
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoComplete="current-password"
+          />
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-4 top-[42px] text-slate-400 hover:text-purple transition-colors p-1 z-10"
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </motion.button>
+        </div>
 
-        <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" className="w-4 h-4 rounded border-slate-300" />
-            <span className="text-sm text-slate-600">{t('auth.login.remember_me')}</span>
+        {/* Remember me & Forgot */}
+        <div className="flex items-center justify-between px-1 pt-1">
+          <label htmlFor="remember-me" className="flex items-center gap-3 cursor-pointer group">
+            <div className="relative flex items-center justify-center">
+              <input id="remember-me" type="checkbox" className="peer sr-only" />
+              <div className="w-5 h-5 border-2 border-slate-200 rounded-lg peer-checked:bg-purple peer-checked:border-purple transition-all duration-300 group-hover:border-purple/50" />
+              <div className="absolute opacity-0 peer-checked:opacity-100 transition-opacity text-white">
+                <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>
+              </div>
+            </div>
+            <span className="text-sm font-bold text-slate-500 group-hover:text-slate-700 transition-colors">
+              {t('auth.login.remember_me')}
+            </span>
           </label>
-          <a href="#" className="text-sm font-semibold text-primary hover:underline">
+          <a href="#" className="text-sm font-bold text-purple hover:text-purple/70 transition-colors tracking-tight">
             {t('auth.login.forgot_password')}
           </a>
         </div>
 
-        <Button type="submit" className="w-full" isLoading={loading} icon={ArrowRight}>
-          {t('auth.login.submit')}
-        </Button>
+        <div className="pt-2">
+          <Button 
+            type="submit" 
+            className="w-full h-14" 
+            size="lg"
+            isLoading={loading} 
+            icon={ArrowRight}
+          >
+            {t('auth.login.submit')}
+          </Button>
+        </div>
       </form>
 
-      <div className="mt-8 text-center">
-        <p className="text-sm text-slate-500">
+      <div className="mt-10 text-center">
+        <p className="text-base text-slate-500 font-medium">
           {t('auth.login.no_account')}{' '}
-          <Link to="/auth/signup" className="font-bold text-primary hover:underline">
+          <Link to="/auth/signup" className="font-black text-purple hover:text-purple/70 transition-colors">
             {t('auth.login.signup_link')}
           </Link>
         </p>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
