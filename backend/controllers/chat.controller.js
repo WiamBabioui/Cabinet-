@@ -1,50 +1,38 @@
-import pool from '../config/db.mysql.js';
-import { createNotification } from './notification.controller.js';
+import Conversation from '../models/Conversation.js';
+import Message from '../models/Message.js';
+import pool from '../config/db.mysql.js'; // Keep for now for getContacts and fetching user details
+import { io } from '../server.js';
+
 
 // ─── Get or create conversation between two users ─────────
-const getOrCreateConversation = async (user1_id, user2_id) => {
-  const [min, max] = [Math.min(user1_id, user2_id), Math.max(user1_id, user2_id)];
-  let [rows] = await pool.execute(
-    'SELECT * FROM conversations WHERE user1_id = ? AND user2_id = ?',
-    [min, max]
-  );
-  if (rows.length) return rows[0];
-
-  const [result] = await pool.execute(
-    'INSERT INTO conversations (user1_id, user2_id) VALUES (?, ?)',
-    [min, max]
-  );
-  const [conv] = await pool.execute('SELECT * FROM conversations WHERE id = ?', [result.insertId]);
-  return conv[0];
-};
-
-// ─── GET /api/chat/conversations ──────────────────────────
 export const getConversations = async (req, res) => {
   const userId = req.user.id;
   try {
-    const [rows] = await pool.execute(
-      `SELECT
-         c.*,
-         u1.prenom AS u1_prenom, u1.nom AS u1_nom, u1.role AS u1_role, u1.photo_url AS u1_photo,
-         u2.prenom AS u2_prenom, u2.nom AS u2_nom, u2.role AS u2_role, u2.photo_url AS u2_photo,
-         (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id AND m.lu = 0 AND m.expediteur_id != ?) AS unread_count
-       FROM conversations c
-       JOIN utilisateurs u1 ON u1.id = c.user1_id
-       JOIN utilisateurs u2 ON u2.id = c.user2_id
-       WHERE c.user1_id = ? OR c.user2_id = ?
-       ORDER BY c.last_msg_at DESC`,
-      [userId, userId, userId]
+    const conversations = await Conversation.find({ participants: userId })
+                                            .sort({ updatedAt: -1 });
+
+    const conversationsWithDetails = await Promise.all(
+      conversations.map(async (conv) => {
+        const otherUserId = conv.participants.find((id) => id !== userId);
+        const otherUserDetails = await getUserDetails(otherUserId);
+
+        const unreadCount = await Message.countDocuments({
+          conversationId: conv._id,
+          receiverId: userId,
+          seen: false
+        });
+
+        return {
+          id: conv._id,
+          other_user: otherUserDetails,
+          lastMessage: conv.lastMessage,
+          updatedAt: conv.updatedAt,
+          unread_count: unreadCount
+        };
+      })
     );
 
-    const conversations = rows.map(conv => {
-      const other = conv.user1_id === userId
-        ? { id: conv.user2_id, prenom: conv.u2_prenom, nom: conv.u2_nom, role: conv.u2_role, photo_url: conv.u2_photo }
-        : { id: conv.user1_id, prenom: conv.u1_prenom, nom: conv.u1_nom, role: conv.u1_role, photo_url: conv.u1_photo };
-      return { id: conv.id, other_user: other, dernier_message: conv.dernier_message,
-               last_msg_at: conv.last_msg_at, unread_count: conv.unread_count };
-    });
-
-    res.json({ conversations });
+    res.json({ conversations: conversationsWithDetails });
   } catch (err) {
     console.error('getConversations error:', err);
     res.status(500).json({ message: 'Erreur serveur' });
@@ -58,38 +46,40 @@ export const getMessages = async (req, res) => {
   const { before, limit = 50 } = req.query;
 
   try {
-    // Verify the other user exists and can be chatted with
-    const [otherUser] = await pool.execute(
-      'SELECT id, prenom, nom, role FROM utilisateurs WHERE id = ?',
-      [otherId]
-    );
-    if (!otherUser.length) return res.status(404).json({ message: 'Utilisateur introuvable' });
+    // Verify the other user exists
+    const otherUser = await getUserDetails(otherId);
+    if (!otherUser) return res.status(404).json({ message: 'Utilisateur introuvable' });
 
-    const conv = await getOrCreateConversation(meId, otherId);
+    const conversation = await getOrCreateConversation(meId, otherId);
 
-    let where  = 'WHERE m.conversation_id = ?';
-    const params = [conv.id];
+    const query = {
+      conversationId: conversation._id,
+    };
+
     if (before) {
-      where += ' AND m.id < ?';
-      params.push(before);
+      query.createdAt = { $lt: new Date(before) };
     }
 
-    const [messages] = await pool.execute(
-      `SELECT m.*, u.prenom, u.nom, u.photo_url
-       FROM messages m
-       JOIN utilisateurs u ON u.id = m.expediteur_id
-       ${where}
-       ORDER BY m.created_at DESC LIMIT ?`,
-      [...params, parseInt(limit)]
-    );
+    const messages = await Message.find(query)
+                                  .sort({ createdAt: -1 })
+                                  .limit(parseInt(limit));
 
     // Mark messages from other user as read
-    await pool.execute(
-      'UPDATE messages SET lu = 1 WHERE conversation_id = ? AND expediteur_id = ? AND lu = 0',
-      [conv.id, otherId]
+    await Message.updateMany(
+      { conversationId: conversation._id, senderId: otherId, receiverId: meId, seen: false },
+      { $set: { seen: true } }
     );
 
-    res.json({ messages: messages.reverse(), conversation_id: conv.id, other_user: otherUser[0] });
+    // Populate sender details for each message (assuming senderId is MySQL user ID)
+    const messagesWithSenderDetails = await Promise.all(messages.map(async (msg) => {
+      const senderDetails = await getUserDetails(msg.senderId);
+      return {
+        ...msg.toObject(),
+        senderDetails: senderDetails
+      };
+    }));
+
+    res.json({ messages: messagesWithSenderDetails.reverse(), conversation_id: conversation._id, other_user: otherUser });
   } catch (err) {
     console.error('getMessages error:', err);
     res.status(500).json({ message: 'Erreur serveur' });
@@ -104,35 +94,43 @@ export const sendMessage = async (req, res) => {
   if (!contenu?.trim()) return res.status(400).json({ message: 'Message vide' });
 
   try {
-    const conv = await getOrCreateConversation(expediteur_id, parseInt(destinataire_id));
+    const conversation = await getOrCreateConversation(expediteur_id, parseInt(destinataire_id));
 
-    const [result] = await pool.execute(
-      'INSERT INTO messages (conversation_id, expediteur_id, contenu) VALUES (?, ?, ?)',
-      [conv.id, expediteur_id, contenu.trim()]
-    );
+    const newMessage = new Message({
+      conversationId: conversation._id,
+      senderId: expediteur_id,
+      receiverId: parseInt(destinataire_id),
+      message: contenu.trim()
+    });
 
-    await pool.execute(
-      'UPDATE conversations SET dernier_message = ?, last_msg_at = NOW() WHERE id = ?',
-      [contenu.trim().substring(0, 100), conv.id]
-    );
+    await newMessage.save();
 
-    const [msg] = await pool.execute(
-      `SELECT m.*, u.prenom, u.nom, u.photo_url
-       FROM messages m JOIN utilisateurs u ON u.id = m.expediteur_id
-       WHERE m.id = ?`,
-      [result.insertId]
-    );
+    conversation.lastMessage = {
+      text: newMessage.message,
+      senderId: newMessage.senderId,
+      createdAt: newMessage.createdAt
+    };
+    conversation.updatedAt = newMessage.createdAt;
+    await conversation.save();
 
-    // Notification pour le destinataire
+    // Emit message via Socket.IO
+    io.to(`conv_${conversation._id.toString()}`).emit('receive_message', {
+      ...newMessage.toObject(),
+      senderDetails: senderDetails
+    });
+
+    const senderDetails = await getUserDetails(expediteur_id);
+
+    // Notification pour le destinataire - this will be refactored later
     await createNotification(
-      destinataire_id, 
-      'message_new', 
-      'Nouveau message', 
-      `${req.user.prenom} vous a envoyé un message : ${contenu.substring(0, 50)}...`,
-      { conversation_id: conv.id, expediteur_id }
+      destinataire_id,
+      'message_new',
+      'Nouveau message',
+      `${senderDetails.prenom} vous a envoyé un message : ${contenu.substring(0, 50)}...`,
+      { conversation_id: conversation._id, expediteur_id }
     );
 
-    res.status(201).json({ message: msg[0] });
+    res.status(201).json({ message: { ...newMessage.toObject(), senderDetails } });
   } catch (err) {
     console.error('sendMessage error:', err);
     res.status(500).json({ message: 'Erreur serveur' });
@@ -198,49 +196,38 @@ export const deleteMessage = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    // Check if message exists and belongs to user
-    const [msgRows] = await pool.execute(
-      'SELECT * FROM messages WHERE id = ?',
-      [messageId]
-    );
+    const message = await Message.findById(messageId);
 
-    if (msgRows.length === 0) {
+    if (!message) {
       return res.status(404).json({ message: 'Message introuvable' });
     }
 
-    const message = msgRows[0];
-
-    if (message.expediteur_id !== userId) {
+    if (message.senderId !== userId) {
       return res.status(403).json({ message: 'Non autorisé à supprimer ce message' });
     }
 
-    // Delete the message
-    await pool.execute('DELETE FROM messages WHERE id = ?', [messageId]);
+    const conversationId = message.conversationId;
+    await Message.deleteOne({ _id: messageId });
 
     // Update conversation's last message if it was the one deleted
-    const [convRows] = await pool.execute(
-      'SELECT * FROM conversations WHERE id = ?',
-      [message.conversation_id]
-    );
+    const conversation = await Conversation.findById(conversationId);
 
-    if (convRows.length > 0) {
-      // Find the new last message
-      const [lastMsgRows] = await pool.execute(
-        'SELECT contenu, created_at FROM messages WHERE conversation_id = ? ORDER BY created_at DESC LIMIT 1',
-        [message.conversation_id]
-      );
+    if (conversation) {
+      if (conversation.lastMessage && conversation.lastMessage._id.toString() === messageId) {
+        // Find the new last message
+        const lastMessage = await Message.findOne({ conversationId })
+                                         .sort({ createdAt: -1 });
 
-      if (lastMsgRows.length > 0) {
-        await pool.execute(
-          'UPDATE conversations SET dernier_message = ?, last_msg_at = ? WHERE id = ?',
-          [lastMsgRows[0].contenu.substring(0, 100), lastMsgRows[0].created_at, message.conversation_id]
-        );
-      } else {
-        // No messages left in conversation
-        await pool.execute(
-          'UPDATE conversations SET dernier_message = NULL, last_msg_at = created_at WHERE id = ?',
-          [message.conversation_id]
-        );
+        if (lastMessage) {
+          conversation.lastMessage = {
+            text: lastMessage.message,
+            senderId: lastMessage.senderId,
+            createdAt: lastMessage.createdAt
+          };
+        } else {
+          conversation.lastMessage = null; // No messages left
+        }
+        await conversation.save();
       }
     }
 

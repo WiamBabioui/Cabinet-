@@ -21,6 +21,7 @@
   "homepage": "https://github.com/WiamBabioui/Cabinet-#readme",
   "dependencies": {
     "express": "^5.2.1",
+    "mongodb": "^7.2.0",
     "node": "^26.0.0"
   },
   "devDependencies": {

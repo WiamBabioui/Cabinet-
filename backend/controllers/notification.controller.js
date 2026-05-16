@@ -1,24 +1,20 @@
-import pool from '../config/db.mysql.js';
-
-// ─── Helper: create notification (also used by other controllers) ──
-export const createNotification = async (destinataireId, type, titre, message, data = {}) => {
-  // Mapping internal types to DB enums
-  const typeMap = {
-    'appointment_new':       'rappel_rdv',
-    'appointment_confirmed': 'confirmation_rdv',
-    'appointment_cancelled': 'annulation_rdv',
-    'appointment_completed': 'alerte_systeme',
-    'message_new':           'message_interne',
-    'system_welcome':        'alerte_systeme'
-  };
-
-  const dbType = typeMap[type] || 'alerte_systeme';
-
+import Notification from '../models/Notification.js';
+import { io } from '../server.js'; // Re-import io for real-time notifications
+export const createNotification = async (userId, type, title, message, data = {}) => {
   try {
-    await pool.execute(
-      'INSERT INTO notifications (destinataire_id, type, titre, corps, donnees_contexte) VALUES (?, ?, ?, ?, ?)',
-      [destinataireId, dbType, titre, message, JSON.stringify(data)]
-    );
+    const newNotification = new Notification({
+      userId,
+      type,
+      title,
+      message,
+      metadata: data // Assuming 'data' can be stored in a 'metadata' field in the schema
+    });
+    await newNotification.save();
+
+    // Emit notification via Socket.IO
+    io.to(`user_${userId}`).emit('new_notification', newNotification);
+
+    return newNotification;
   } catch (err) {
     console.error('createNotification error:', err);
   }
@@ -27,15 +23,11 @@ export const createNotification = async (destinataireId, type, titre, message, d
 // ─── GET /api/notifications ───────────────────────────────
 export const getNotifications = async (req, res) => {
   try {
-    const [rows] = await pool.execute(
-      `SELECT * FROM notifications
-       WHERE destinataire_id = ?
-       ORDER BY created_at DESC
-       LIMIT 50`,
-      [req.user.id]
-    );
-    const unread = rows.filter(n => !n.lu).length;
-    res.json({ notifications: rows, unread });
+    const notifications = await Notification.find({ userId: req.user.id })
+                                            .sort({ createdAt: -1 })
+                                            .limit(50);
+    const unread = await Notification.countDocuments({ userId: req.user.id, isRead: false });
+    res.json({ notifications, unread });
   } catch (err) {
     console.error('getNotifications error:', err);
     res.status(500).json({ message: 'Erreur serveur' });
@@ -45,12 +37,22 @@ export const getNotifications = async (req, res) => {
 // ─── PATCH /api/notifications/:id/read ───────────────────
 export const markAsRead = async (req, res) => {
   try {
-    await pool.execute(
-      'UPDATE notifications SET lu = 1, lu_le = NOW() WHERE id = ? AND destinataire_id = ?',
-      [req.params.id, req.user.id]
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const notification = await Notification.findOneAndUpdate(
+      { _id: id, userId: userId },
+      { $set: { isRead: true } },
+      { new: true }
     );
-    res.json({ message: 'Notification lue' });
+
+    if (!notification) {
+      return res.status(404).json({ message: 'Notification non trouvée ou non autorisée' });
+    }
+
+    res.json({ message: 'Notification marquée comme lue', notification });
   } catch (err) {
+    console.error('markAsRead error:', err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
@@ -58,12 +60,16 @@ export const markAsRead = async (req, res) => {
 // ─── PATCH /api/notifications/read-all ───────────────────
 export const markAllAsRead = async (req, res) => {
   try {
-    await pool.execute(
-      'UPDATE notifications SET lu = 1, lu_le = NOW() WHERE destinataire_id = ?',
-      [req.user.id]
+    const userId = req.user.id;
+
+    await Notification.updateMany(
+      { userId: userId, isRead: false },
+      { $set: { isRead: true } }
     );
+
     res.json({ message: 'Toutes les notifications marquées comme lues' });
   } catch (err) {
+    console.error('markAllAsRead error:', err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
@@ -71,12 +77,18 @@ export const markAllAsRead = async (req, res) => {
 // ─── DELETE /api/notifications/:id ───────────────────────
 export const deleteNotification = async (req, res) => {
   try {
-    await pool.execute(
-      'DELETE FROM notifications WHERE id = ? AND destinataire_id = ?',
-      [req.params.id, req.user.id]
-    );
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const result = await Notification.deleteOne({ _id: id, userId: userId });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: 'Notification non trouvée ou non autorisée' });
+    }
+
     res.json({ message: 'Notification supprimée' });
   } catch (err) {
+    console.error('deleteNotification error:', err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };

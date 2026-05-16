@@ -14,6 +14,7 @@ import appointmentRoutes from './routes/appointment.routes.js';
 import chatRoutes from './routes/chat.routes.js';
 import consultationRoutes from './routes/consultation.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
+import activityLogRoutes from './routes/activitylog.routes.js';
 
 dotenv.config();
 
@@ -36,6 +37,7 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/consultations', consultationRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/activitylogs', activityLogRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: '🚀 Cabinet+ API fonctionne !' });
@@ -59,11 +61,13 @@ io.on('connection', (socket) => {
     socket.to(`conv_${data.conversation_id}`).emit('message_deleted', data.message_id);
   });
 
+  socket.on('join_notifications', (userId) => {
+    socket.join(`user_${userId}`);
+    console.log(`🔔 Client ${socket.id} a rejoint la salle de notifications de l'utilisateur ${userId}`);
+  });
+
   socket.on('disconnect', () => console.log('🔌 Client déconnecté:', socket.id));
 });
-
-
-export { io };
 connectMongo();
 
 const PORT = process.env.PORT || 5000;
