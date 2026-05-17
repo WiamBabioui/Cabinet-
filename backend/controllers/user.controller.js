@@ -21,7 +21,7 @@ export const getUsers = async (req, res) => {
 export const getUserById = async (req, res) => {
   try {
     const [rows] = await pool.execute(
-      `SELECT u.id, u.uuid, u.email, u.role, u.prenom, u.nom, u.telephone,
+      `SELECT u.id, u.uuid, u.email, u.role, u.prenom, u.nom, u.telephone, u.photo_url,
               u.actif, u.created_at,
               m.id as medecin_id, m.specialite_id, m.titre,
               m.consultation_tarif, m.consultation_duree, m.disponible,
@@ -55,7 +55,7 @@ export const updateUser = async (req, res) => {
 
   try {
     await pool.execute(
-      `UPDATE utilisateurs SET prenom = ?, nom = ?, telephone = ?, photo_url = ?
+      `UPDATE utilisateurs SET prenom = ?, nom = ?, telephone = ?, photo_url = COALESCE(?, photo_url)
        WHERE id = ?`,
       [prenom, nom, telephone || null, photo_url || null, id]
     );
@@ -119,7 +119,6 @@ export const deleteUser = async (req, res) => {
 // ✅ LISTE des spécialités (pour le formulaire médecin)
 export const getSpecialites = async (req, res) => {
   try {
-    console.log('📋 Route specialites appelée !'); // ← ajoute ça
     const [specialites] = await pool.execute(
       'SELECT id, libelle, code FROM specialites ORDER BY libelle'
     );

@@ -14,12 +14,15 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
+  const displayUser = user || {};
+  const rawRole = displayUser.role?.toLowerCase().trim();
+  const userRole = rawRole || 'patient';
 
   const links = [
     {
       name: t('sidebar.dashboard'),
       icon: LayoutDashboard,
-      path: '/',
+      path: userRole === 'secretaire' ? '/assistant-dashboard' : '/',
       roles: ['medecin', 'secretaire']
     },
     {
@@ -50,7 +53,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
       name: t('sidebar.profile'),
       icon: UserCog,
       path: '/profile',
-      roles: ['medecin', 'secretaire']
+      roles: ['medecin', 'secretaire', 'patient']
     },
     {
       name: t('sidebar.patient_portal'),
@@ -60,7 +63,6 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     },
   ];
 
-  const userRole = user?.role?.toLowerCase().trim();
   const filteredLinks = links.filter(link => 
     link.roles.some(role => role.toLowerCase() === userRole)
   );
@@ -110,7 +112,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
 
       {/* Collapse Toggle */}
       <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
+        onClick={() => setIsCollapsed?.(!isCollapsed)}
         className={twMerge(
           "absolute top-8 w-6 h-12 bg-white/40 dark:bg-indigo/40 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-full shadow-soft flex items-center justify-center text-slate-500 hover:text-purple hover:border-purple/50 transition-all duration-300 z-50",
           isRtl ? 'left-[-12px]' : 'right-[-12px]'
@@ -168,11 +170,11 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           {!isCollapsed ? (
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-gradient-to-tr from-coral to-gold rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-glow flex-shrink-0 hover:scale-110 transition-transform cursor-pointer">
-                {user?.prenom?.charAt(0)}{user?.nom?.charAt(0)}
+                {displayUser.prenom?.charAt(0) || '?'}{displayUser.nom?.charAt(0) || ''}
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-black text-slate-800 dark:text-white truncate leading-none mb-1.5">
-                  {user?.prenom} {user?.nom}
+                  {displayUser.prenom || ''} {displayUser.nom || ''}
                 </p>
                 <div className="flex items-center gap-1.5">
                   <motion.div 
@@ -188,7 +190,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
             </div>
           ) : (
             <div className="w-10 h-10 bg-gradient-to-tr from-coral to-gold rounded-xl flex items-center justify-center text-white font-black text-xs shadow-glow cursor-pointer">
-               {user?.prenom?.charAt(0)}{user?.nom?.charAt(0)}
+               {displayUser.prenom?.charAt(0) || '?'}{displayUser.nom?.charAt(0) || ''}
             </div>
           )}
 
@@ -210,4 +212,4 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   );
 };
 
-export default Sidebar;
+export default Sidebar;

@@ -103,7 +103,7 @@ const AuthLayout = () => {
             className="relative z-10 p-7 bg-white/5 backdrop-blur-lg rounded-3xl border border-white/10"
           >
             <p className="text-white/80 font-medium italic text-base leading-relaxed mb-5">
-              "{t('auth.layout.quote')}"
+              &ldquo;{t('auth.layout.quote')}&rdquo;
             </p>
             <div className="flex items-center gap-4">
               <div className="w-11 h-11 bg-gradient-to-tr from-coral to-gold rounded-2xl flex items-center justify-center text-white font-bold shadow-glow flex-shrink-0">

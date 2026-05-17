@@ -12,6 +12,7 @@ const router = express.Router();
 router.use(protect);
 
 router.get('/', getPatients);
+// ⚠️ /portal MUST be before /:id — otherwise Express matches 'portal' as the :id param
 router.get('/portal', getPortalData);
 
 router.get('/:id', getPatientById);

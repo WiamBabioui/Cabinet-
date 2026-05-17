@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
+import {
   Search, 
   MoreVertical, 
   User as UserIcon, 
@@ -17,24 +17,22 @@ import {
   Mic,
   Image as ImageIcon
 } from 'lucide-react';
-import { io } from 'socket.io-client';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import Card from '../components/dashboard/Card';
 import Input from '../components/common/Input';
-import Button from '../components/common/Button';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import { useTranslation } from 'react-i18next';
 import { twMerge } from 'tailwind-merge';
 
-const socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000');
-
 const Chat = () => {
   const { user: me } = useAuth();
+  const socket = useSocket();
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const targetId = location.state?.contactId;
+  const targetContact = location.state?.contact;
 
   const [contacts, setContacts] = useState([]);
   const [activeContact, setActiveContact] = useState(null);
@@ -61,27 +59,54 @@ const Chat = () => {
   }, [activeContact]);
 
   useEffect(() => {
+    if (!socket) return;
     if (conversationId) {
       socket.emit('join_conversation', conversationId);
     }
     
     const handleReceiveMessage = (newMsg) => {
-      setMessages(prev => [...prev, newMsg]);
+      const nextConversationId = newMsg.conversation_id || newMsg.conversationId;
+      if (nextConversationId && !conversationId) setConversationId(nextConversationId);
+
+      setMessages(prev => {
+        const nextId = newMsg.id || newMsg._id;
+        const senderId = newMsg.expediteur_id ?? newMsg.senderId;
+        const receiverId = newMsg.destinataire_id ?? newMsg.receiverId;
+        const belongsToActiveContact = activeContact?.id && (
+          senderId === activeContact.id || receiverId === activeContact.id
+        );
+
+        if (prev.some(msg => (msg.id || msg._id) === nextId)) return prev;
+        if (conversationId && nextConversationId !== conversationId) return prev;
+        if (!conversationId && !belongsToActiveContact) return prev;
+        return [...prev, newMsg];
+      });
     };
 
     socket.on('receive_message', handleReceiveMessage);
 
+    const handleConversationUpdated = (conversation) => {
+      if (!conversation?.other_user) return;
+      setContacts(prev => {
+        const exists = prev.some(contact => contact.id === conversation.other_user.id);
+        return exists ? prev : [conversation.other_user, ...prev];
+      });
+    };
+
+    socket.on('conversation_updated', handleConversationUpdated);
+
     const handleMessageDeleted = (deletedMsgId) => {
-      setMessages(prev => prev.filter(m => m.id !== deletedMsgId));
+      setMessages(prev => prev.filter(m => (m.id || m._id) !== deletedMsgId));
     };
 
     socket.on('message_deleted', handleMessageDeleted);
 
     return () => {
       socket.off('receive_message', handleReceiveMessage);
+      socket.off('conversation_updated', handleConversationUpdated);
       socket.off('message_deleted', handleMessageDeleted);
     };
-  }, [conversationId]);
+  }, [socket, conversationId, activeContact]);
 
   useEffect(() => {
     scrollToBottom();
@@ -90,19 +115,24 @@ const Chat = () => {
   const fetchContacts = async () => {
     try {
       const res = await api.get('/chat/contacts');
-      setContacts(res.data.contacts);
+      let nextContacts = Array.isArray(res.data.contacts) ? res.data.contacts : [];
       
       // If we came from Patients list with an ID, find that contact
       if (targetId) {
-        const target = res.data.contacts.find(c => c.id === targetId);
+        const target = nextContacts.find(c => String(c.id) === String(targetId));
         if (target) {
           setActiveContact(target);
-        } else if (res.data.contacts.length > 0) {
-          setActiveContact(res.data.contacts[0]);
+        } else if (targetContact) {
+          // If the contact doesn't exist in history yet, inject them at the top
+          nextContacts = [targetContact, ...nextContacts];
+          setActiveContact(targetContact);
+        } else if (nextContacts.length > 0) {
+          setActiveContact(nextContacts[0]);
         }
-      } else if (res.data.contacts.length > 0 && !activeContact) {
-        setActiveContact(res.data.contacts[0]);
+      } else if (nextContacts.length > 0 && !activeContact) {
+        setActiveContact(nextContacts[0]);
       }
+      setContacts(nextContacts);
     } catch (err) {
       console.error('Failed to fetch contacts');
     } finally {
@@ -137,12 +167,8 @@ const Chat = () => {
       });
 
       const newMsg = res.data.message;
-      setMessages(prev => [...prev, newMsg]);
-      
-      socket.emit('send_message', {
-        conversation_id: conversationId,
-        message: newMsg
-      });
+      setConversationId(newMsg.conversation_id || newMsg.conversationId || conversationId);
+      setMessages(prev => prev.some(msg => (msg.id || msg._id) === (newMsg.id || newMsg._id)) ? prev : [...prev, newMsg]);
     } catch (err) {
       alert(t('chat.send_error') || 'Error sending message');
     }
@@ -153,11 +179,7 @@ const Chat = () => {
 
     try {
       await api.delete(`/chat/messages/${messageId}`);
-      setMessages(prev => prev.filter(m => m.id !== messageId));
-      socket.emit('delete_message', {
-        conversation_id: conversationId,
-        message_id: messageId
-      });
+      setMessages(prev => prev.filter(m => (m.id || m._id) !== messageId));
     } catch (err) {
       console.error('Delete error');
     }
@@ -217,7 +239,7 @@ const Chat = () => {
                 )}>
                   {contact.photo_url ? (
                     <img src={contact.photo_url} alt="" className="w-full h-full rounded-2xl object-cover" />
-                  ) : contact.prenom.charAt(0)}
+                  ) : contact.prenom?.charAt(0) || '?'}
                 </div>
                 {/* Online Indicator */}
                 <div className={twMerge(
@@ -225,7 +247,7 @@ const Chat = () => {
                   activeContact?.id === contact.id ? 'border-purple bg-emerald' : 'border-white bg-emerald shadow-sm'
                 )}></div>
               </div>
-              <div className="flex-1 text-left min-w-0">
+              <div className="flex-1 text-left min-w-0 relative z-10">
                 <h4 className="font-black text-sm truncate leading-tight mb-1">{contact.prenom} {contact.nom}</h4>
                 <div className="flex items-center justify-between">
                    <p className={twMerge("text-[10px] font-bold uppercase tracking-wider truncate", activeContact?.id === contact.id ? 'text-white/70' : 'text-slate-400')}>
@@ -282,7 +304,7 @@ const Chat = () => {
                     <div className="w-14 h-14 bg-gradient-to-br from-purple to-indigo rounded-[1.25rem] flex items-center justify-center text-white font-black text-xl overflow-hidden shadow-glow">
                       {activeContact.photo_url ? (
                         <img src={activeContact.photo_url} alt="" className="w-full h-full object-cover" />
-                      ) : activeContact.prenom.charAt(0)}
+                      ) : activeContact.prenom?.charAt(0) || '?'}
                     </div>
                     <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald rounded-full border-4 border-white shadow-sm"></div>
                   </div>
@@ -331,10 +353,14 @@ const Chat = () => {
 
                     <div className="space-y-6">
                       {messages.map((msg, i) => {
-                        const isMe = msg.expediteur_id === me.id;
+                        const msgId = msg.id || msg._id;
+                        const isMe = (msg.expediteur_id ?? msg.senderId) === me.id;
+                        const text = msg.contenu ?? msg.content ?? msg.message ?? '';
+                        const createdAt = msg.created_at ?? msg.createdAt;
+                        const seen = msg.lu ?? msg.seen;
                         return (
                           <motion.div 
-                            key={msg.id} 
+                            key={msgId} 
                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             transition={{ delay: 0.05 }}
@@ -347,19 +373,19 @@ const Chat = () => {
                                   ? 'bg-gradient-to-br from-purple to-indigo text-white rounded-tr-none' 
                                   : 'bg-white/70 backdrop-blur-md text-slate-700 border border-white/80 rounded-tl-none'
                               )}>
-                                <p className="text-[15px] font-medium leading-relaxed tracking-tight">{msg.contenu}</p>
+                                <p className="text-[15px] font-medium leading-relaxed tracking-tight">{text}</p>
                                 
                                 <div className={twMerge(
                                   "flex items-center gap-1.5 mt-2 text-[9px] font-black uppercase tracking-widest",
                                   isMe ? 'text-white/60' : 'text-slate-400'
                                 )}>
-                                  {new Date(msg.created_at).toLocaleTimeString(i18n.language === 'ar' ? 'ar-MA' : 'fr-MA', { hour: '2-digit', minute: '2-digit' })}
-                                  {isMe && <CheckCheck size={12} className={msg.lu ? 'text-emerald-300' : 'text-white/30'} />}
+                                  {new Date(createdAt).toLocaleTimeString(i18n.language === 'ar' ? 'ar-MA' : 'fr-MA', { hour: '2-digit', minute: '2-digit' })}
+                                  {isMe && <CheckCheck size={12} className={seen ? 'text-emerald-300' : 'text-white/30'} />}
                                 </div>
 
                                 {isMe && (
                                   <button 
-                                    onClick={() => handleDeleteMessage(msg.id)}
+                                    onClick={() => handleDeleteMessage(msgId)}
                                     className="absolute -left-10 top-1/2 -translate-y-1/2 p-2.5 text-slate-300 hover:text-coral opacity-0 group-hover:opacity-100 transition-all bg-white shadow-soft rounded-xl border border-slate-100 scale-75 group-hover:scale-100"
                                     title={t('chat.delete_tooltip')}
                                   >

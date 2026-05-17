@@ -41,8 +41,10 @@ const Signup = () => {
     setError('');
 
     try {
-      await signup({ ...form, role });
-      navigate('/');
+      const user = await signup({ ...form, role });
+      if (user.role === 'patient') navigate('/patient-portal');
+      else if (user.role === 'secretaire') navigate('/assistant-dashboard');
+      else navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || t('users.modal.error'));
     } finally {

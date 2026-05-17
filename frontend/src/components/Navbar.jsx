@@ -3,7 +3,7 @@ import { Bell, Search, Mail, LogOut, User, Settings, ChevronDown, X, Sparkles, A
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import LanguageSwitcher from './common/LanguageSwitcher';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -134,7 +134,7 @@ const MessagesDropdown = ({ onClose }) => {
             {conversations.map((conv) => (
               <button
                 key={conv.id}
-                onClick={() => { navigate('/chat'); onClose(); }}
+                onClick={() => { navigate('/chat', { state: { contactId: conv.other_user.id } }); onClose(); }}
                 className="w-full px-6 py-4 hover:bg-emerald/5 border-b border-slate-50 flex items-center gap-4 text-left transition-all group"
               >
                 <div className="w-12 h-12 bg-gradient-to-br from-emerald to-mint rounded-2xl flex items-center justify-center text-indigo font-black text-xs overflow-hidden shrink-0 group-hover:scale-110 transition-transform duration-300">
@@ -236,6 +236,7 @@ const Navbar = () => {
   const { user, logout } = useAuth();
   const socket = useSocket();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
 
   const [showNotifs,   setShowNotifs]   = useState(false);
@@ -266,23 +267,25 @@ const Navbar = () => {
 
   useEffect(() => {
     if (socket) {
-      socket.on('new_notification', (notif) => {
+      const handleNotification = () => {
         setNotifCount(prev => prev + 1);
-        // Optionnel: jouer un son ou afficher un toast
-      });
+      };
 
-      socket.on('receive_message', (msg) => {
+      const handleMessage = () => {
         if (location.pathname !== '/chat') {
           setMsgCount(prev => prev + 1);
         }
-      });
+      };
+
+      socket.on('new_notification', handleNotification);
+      socket.on('receive_message', handleMessage);
 
       return () => {
-        socket.off('new_notification');
-        socket.off('receive_message');
+        socket.off('new_notification', handleNotification);
+        socket.off('receive_message', handleMessage);
       };
     }
-  }, [socket]);
+  }, [socket, location.pathname]);
 
   const navRef = useRef(null);
 

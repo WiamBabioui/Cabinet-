@@ -321,10 +321,10 @@ const Patients = () => {
                           >
                             <ExternalLink size={20} strokeWidth={2.5} />
                           </motion.button>
-                          <motion.button
+                           <motion.button
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.95 }}
-                            onClick={() => navigate(`/chat`, { state: { contactId: p.id } })}
+                            onClick={() => navigate(`/chat`, { state: { contactId: p.id, contact: { id: p.id, prenom: p.prenom, nom: p.nom, role: 'patient', photo_url: p.photo_url } } })}
                             className="w-11 h-11 flex items-center justify-center bg-white shadow-soft rounded-2xl text-slate-400 hover:text-indigo hover:shadow-glow-indigo transition-all border border-slate-100"
                           >
                             <MessageSquare size={20} strokeWidth={2.5} />

@@ -17,7 +17,8 @@ import {
   Activity,
   ArrowRight,
   ShieldCheck,
-  Stethoscope
+  Stethoscope,
+  Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Card from '../components/dashboard/Card';

@@ -11,8 +11,10 @@ router.use(protect);
 
 router.get('/', getNotifications);
 router.post('/create', createNotificationFromFrontend);
-router.patch('/:id/read', markAsRead);
+// ⚠️  /read-all MUST be declared BEFORE /:id/read
+// Otherwise Express matches 'read-all' as the :id param and never reaches this handler
 router.patch('/read-all', markAllAsRead);
+router.patch('/:id/read', markAsRead);
 router.delete('/:id', deleteNotification);
 
 export default router;

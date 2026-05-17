@@ -1,90 +1,120 @@
+import mongoose from 'mongoose';
 import pool from '../config/db.mysql.js';
 import { getSocket } from '../config/socket.js';
+import Conversation from '../models/Conversation.js';
+import Message from '../models/Message.js';
 import { createNotification } from './notification.controller.js';
 
-// ─── Get all conversations for a user ───────────────────────────
+const normalizeId = (value) => Number.parseInt(value, 10);
+
+const normalizeParticipants = (user1, user2) => {
+  const ids = [normalizeId(user1), normalizeId(user2)];
+  if (ids.some(Number.isNaN)) return null;
+  return ids.sort((a, b) => a - b);
+};
+
+const serializeMessage = async (message) => {
+  const raw = message.toObject ? message.toObject() : message;
+  const senderDetails = raw.senderDetails || await getUserDetails(raw.senderId);
+  return {
+    id: raw._id.toString(),
+    _id: raw._id.toString(),
+    conversationId: raw.conversationId.toString(),
+    conversation_id: raw.conversationId.toString(),
+    senderId: raw.senderId,
+    receiverId: raw.receiverId,
+    expediteur_id: raw.senderId,
+    destinataire_id: raw.receiverId,
+    content: raw.content,
+    contenu: raw.content,
+    message: raw.content,
+    seen: !!raw.seen,
+    lu: !!raw.seen,
+    createdAt: raw.createdAt,
+    created_at: raw.createdAt,
+    updatedAt: raw.updatedAt,
+    senderDetails
+  };
+};
+
+const serializeConversation = async (conversation, userId) => {
+  if (!Array.isArray(conversation.participants) || conversation.participants.length !== 2) {
+    return null;
+  }
+
+  const otherUserId = conversation.participants.find((id) => id !== userId);
+  const otherUser = await getUserDetails(otherUserId);
+  if (!otherUser) return null;
+
+  return {
+    id: conversation._id.toString(),
+    _id: conversation._id.toString(),
+    participants: conversation.participants,
+    other_user: otherUser,
+    lastMessage: { text: conversation.lastMessage || '' },
+    lastMessageText: conversation.lastMessage || '',
+    updatedAt: conversation.lastMessageAt || conversation.updatedAt,
+    unread_count: Number(conversation.unreadCounts?.get(String(userId)) || 0)
+  };
+};
+
 export const getConversations = async (req, res) => {
-  const userId = req.user.id;
+  const userId = normalizeId(req.user.id);
+
   try {
-    const [conversations] = await pool.execute(
-      `SELECT c.id as _id, c.dernier_message as lastMessageText, c.last_msg_at as updatedAt,
-              c.user1_id, c.user2_id
-       FROM conversations c
-       WHERE c.user1_id = ? OR c.user2_id = ?
-       ORDER BY c.last_msg_at DESC`,
-      [userId, userId]
-    );
+    const conversations = await Conversation.find({ participants: userId })
+      .sort({ lastMessageAt: -1, updatedAt: -1 })
+      .limit(50);
 
     const conversationsWithDetails = await Promise.all(
-      conversations.map(async (conv) => {
-        const otherUserId = conv.user1_id === userId ? conv.user2_id : conv.user1_id;
-        const otherUserDetails = await getUserDetails(otherUserId);
-
-        const [unreadRows] = await pool.execute(
-          'SELECT COUNT(*) as unread FROM messages WHERE conversation_id = ? AND expediteur_id != ? AND lu = 0',
-          [conv._id, userId]
-        );
-
-        return {
-          id: conv._id,
-          other_user: otherUserDetails,
-          lastMessage: { text: conv.lastMessageText },
-          updatedAt: conv.updatedAt,
-          unread_count: unreadRows[0].unread
-        };
-      })
+      conversations.map((conversation) => serializeConversation(conversation, userId))
     );
 
-    res.json({ conversations: conversationsWithDetails });
+    res.json({ conversations: conversationsWithDetails.filter(Boolean) });
   } catch (err) {
     console.error('getConversations error:', err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
 
-// ─── GET /api/chat/messages/:userId ───────────────────────
 export const getMessages = async (req, res) => {
-  const meId    = req.user.id;
-  const otherId = parseInt(req.params.userId);
+  const meId = normalizeId(req.user.id);
+  const otherId = normalizeId(req.params.userId);
   const { before, limit = 50 } = req.query;
+
+  if (Number.isNaN(otherId)) {
+    return res.status(400).json({ message: 'Utilisateur invalide' });
+  }
 
   try {
     const otherUser = await getUserDetails(otherId);
     if (!otherUser) return res.status(404).json({ message: 'Utilisateur introuvable' });
 
     const conversation = await getOrCreateConversation(meId, otherId);
+    const filter = { conversationId: conversation._id, deleted: { $ne: true } };
 
-    let query = 'SELECT id as _id, contenu as message, expediteur_id as senderId, created_at as createdAt FROM messages WHERE conversation_id = ?';
-    const params = [conversation.id];
+    if (before) filter.createdAt = { $lt: new Date(before) };
 
-    if (before) {
-      query += ' AND created_at < ?';
-      params.push(new Date(before));
-    }
+    const messages = await Message.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(Math.min(normalizeId(limit) || 50, 100));
 
-    query += ' ORDER BY created_at DESC LIMIT ?';
-    params.push(parseInt(limit));
-
-    const [messages] = await pool.execute(query, params);
-
-    // Mark messages from other user as read
-    await pool.execute(
-      'UPDATE messages SET lu = 1 WHERE conversation_id = ? AND expediteur_id = ? AND lu = 0',
-      [conversation.id, otherId]
+    await Message.updateMany(
+      { conversationId: conversation._id, senderId: otherId, receiverId: meId, seen: false },
+      { $set: { seen: true, seenAt: new Date() } }
+    );
+    await Conversation.updateOne(
+      { _id: conversation._id },
+      { $set: { [`unreadCounts.${meId}`]: 0 } }
     );
 
-    const messagesWithSenderDetails = await Promise.all(messages.map(async (msg) => {
-      const senderDetails = await getUserDetails(msg.senderId);
-      return {
-        ...msg,
-        senderDetails: senderDetails
-      };
-    }));
+    const serialized = await Promise.all(messages.reverse().map(serializeMessage));
 
-    res.json({ 
-      messages: messagesWithSenderDetails.reverse(), 
-      conversation_id: conversation.id, 
-      other_user: otherUser 
+    res.json({
+      messages: serialized,
+      conversation_id: conversation._id.toString(),
+      conversationId: conversation._id.toString(),
+      other_user: otherUser
     });
   } catch (err) {
     console.error('getMessages error:', err);
@@ -92,49 +122,52 @@ export const getMessages = async (req, res) => {
   }
 };
 
-// ─── POST /api/chat/messages ──────────────────────────────
 export const sendMessage = async (req, res) => {
-  const { destinataire_id, contenu } = req.body;
-  const expediteur_id = req.user.id;
+  const { destinataire_id, contenu, receiverId, content } = req.body;
+  const senderId = normalizeId(req.user.id);
+  const receiver = normalizeId(destinataire_id ?? receiverId);
+  const text = String(contenu ?? content ?? '').trim();
 
-  if (!contenu?.trim()) return res.status(400).json({ message: 'Message vide' });
+  if (Number.isNaN(receiver)) return res.status(400).json({ message: 'Destinataire invalide' });
+  if (!text) return res.status(400).json({ message: 'Message vide' });
 
   try {
-    const conversation = await getOrCreateConversation(expediteur_id, parseInt(destinataire_id));
+    const receiverDetails = await getUserDetails(receiver);
+    if (!receiverDetails) return res.status(404).json({ message: 'Utilisateur introuvable' });
 
-    const [result] = await pool.execute(
-      'INSERT INTO messages (conversation_id, expediteur_id, contenu) VALUES (?, ?, ?)',
-      [conversation.id, expediteur_id, contenu.trim()]
+    const conversation = await getOrCreateConversation(senderId, receiver);
+    const created = await Message.create({
+      conversationId: conversation._id,
+      senderId,
+      receiverId: receiver,
+      content: text
+    });
+
+    const updatedConversation = await Conversation.findOneAndUpdate(
+      { _id: conversation._id },
+      {
+        $set: { lastMessage: text.substring(0, 100), lastMessageAt: created.createdAt },
+        $inc: { [`unreadCounts.${receiver}`]: 1 }
+      },
+      { new: true }
     );
 
-    const messageId = result.insertId;
+    const newMessage = await serializeMessage(created);
+    const receiverConversation = await serializeConversation(updatedConversation || conversation, receiver);
+    const senderConversation = await serializeConversation(updatedConversation || conversation, senderId);
 
-    await pool.execute(
-      'UPDATE conversations SET dernier_message = ?, last_msg_at = NOW() WHERE id = ?',
-      [contenu.trim(), conversation.id]
-    );
+    getSocket().to(`conv_${conversation._id}`).emit('receive_message', newMessage);
+    getSocket().to(`user_${receiver}`).emit('receive_message', newMessage);
+    if (receiverConversation) getSocket().to(`user_${receiver}`).emit('conversation_updated', receiverConversation);
+    if (senderConversation) getSocket().to(`user_${senderId}`).emit('conversation_updated', senderConversation);
 
-    const senderDetails = await getUserDetails(expediteur_id);
-
-    const newMessage = {
-      _id: messageId,
-      conversationId: conversation.id,
-      senderId: expediteur_id,
-      message: contenu.trim(),
-      createdAt: new Date(),
-      senderDetails
-    };
-
-    // Emit message via Socket.IO
-    getSocket().to(`conv_${conversation.id}`).emit('receive_message', newMessage);
-
-    // Notification pour le destinataire
+    const senderDetails = newMessage.senderDetails || req.user;
     await createNotification(
-      destinataire_id,
+      receiver,
       'message_new',
       'Nouveau message',
-      `${senderDetails.prenom} vous a envoyé un message : ${contenu.substring(0, 50)}...`,
-      { conversation_id: conversation.id, expediteur_id }
+      `${senderDetails.prenom || ''} vous a envoye un message : ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`,
+      { conversation_id: conversation._id.toString(), expediteur_id: senderId }
     );
 
     res.status(201).json({ message: newMessage });
@@ -144,94 +177,111 @@ export const sendMessage = async (req, res) => {
   }
 };
 
-// ─── GET /api/chat/contacts ───────────────────────────────
 export const getContacts = async (req, res) => {
   const { role, id } = req.user;
+  const userRole = role?.toLowerCase().trim();
+
   try {
     let query;
     let params = [];
 
-    if (role === 'medecin') {
+    if (userRole === 'medecin') {
       query = `
-        SELECT DISTINCT u.id, u.prenom, u.nom, u.role, u.photo_url
+        SELECT DISTINCT u.id, u.prenom, u.nom, COALESCE(NULLIF(u.role, ''), 'patient') as role, u.photo_url
         FROM utilisateurs u
-        WHERE u.id != ? 
-          AND (u.role = 'patient' OR u.role = 'secretaire')
+        WHERE u.id != ?
+          AND (u.role = 'patient' OR u.role = 'secretaire' OR u.role = '' OR u.role IS NULL)
           AND u.actif = 1
+          AND u.deleted_at IS NULL
         ORDER BY u.role, u.nom`;
       params = [id];
-    } else if (role === 'patient') {
+    } else if (userRole === 'patient' || !userRole) {
       query = `
         SELECT DISTINCT u.id, u.prenom, u.nom, u.role, u.photo_url
         FROM utilisateurs u
-        WHERE u.role = 'medecin' AND u.actif = 1
+        WHERE u.role = 'medecin' AND u.actif = 1 AND u.deleted_at IS NULL
         ORDER BY u.nom`;
-      params = [];
-    } else if (role === 'secretaire') {
-      // Secretary can chat with: doctors
+    } else if (userRole === 'secretaire') {
       query = `
         SELECT u.id, u.prenom, u.nom, u.role, u.photo_url
         FROM utilisateurs u
-        WHERE u.role = 'medecin' AND u.actif = 1
+        WHERE u.role = 'medecin' AND u.actif = 1 AND u.deleted_at IS NULL
         ORDER BY u.nom`;
     } else {
-      // Fallback for unknown roles
       return res.json({ contacts: [] });
     }
 
     const [contacts] = await pool.execute(query, params);
     res.json({ contacts });
   } catch (err) {
-    console.error('❌ getContacts error:', err);
+    console.error('getContacts error:', err);
     res.status(500).json({ message: 'Erreur serveur', error: err.message });
   }
 };
 
-// ─── DELETE /api/chat/messages/:messageId ─────────────────
 export const deleteMessage = async (req, res) => {
-  const messageId = req.params.messageId;
-  const userId = req.user.id;
+  const userId = normalizeId(req.user.id);
+  const { messageId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(messageId)) {
+    return res.status(400).json({ message: 'Message invalide' });
+  }
 
   try {
-    const [rows] = await pool.execute('SELECT * FROM messages WHERE id = ?', [messageId]);
-    if (rows.length === 0) return res.status(404).json({ message: 'Message introuvable' });
+    const message = await Message.findOne({ _id: messageId, deleted: { $ne: true } });
+    if (!message) return res.status(404).json({ message: 'Message introuvable' });
+    if (message.senderId !== userId) return res.status(403).json({ message: 'Non autorise' });
 
-    const message = rows[0];
-    if (message.expediteur_id !== userId) return res.status(403).json({ message: 'Non autorisé' });
+    message.deleted = true;
+    await message.save();
 
-    await pool.execute('DELETE FROM messages WHERE id = ?', [messageId]);
+    getSocket().to(`conv_${message.conversationId}`).emit('message_deleted', message._id.toString());
 
-    // Optional: update conversation's last message if needed
-    // For simplicity, we just leave it for now or set to 'Message supprimé'
-    
-    res.json({ message: 'Message supprimé avec succès' });
+    res.json({ message: 'Message supprime avec succes' });
   } catch (err) {
     console.error('deleteMessage error:', err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
 
-// ─── Helper Functions ──────────────────────────────────────
 const getUserDetails = async (userId) => {
   const [rows] = await pool.execute(
-    'SELECT id, prenom, nom, role, photo_url FROM utilisateurs WHERE id = ?',
+    `SELECT id, prenom, nom, COALESCE(NULLIF(role, ''), 'patient') as role, photo_url
+     FROM utilisateurs
+     WHERE id = ? AND actif = 1 AND deleted_at IS NULL`,
     [userId]
   );
-  return rows[0];
+  return rows[0] || null;
 };
 
 const getOrCreateConversation = async (user1, user2) => {
-  const [rows] = await pool.execute(
-    'SELECT * FROM conversations WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)',
-    [user1, user2, user2, user1]
-  );
+  const participants = normalizeParticipants(user1, user2);
+  if (!participants) throw new Error('Invalid conversation participants');
+  const participantKey = participants.join(':');
 
-  if (rows.length > 0) return rows[0];
+  let conversation = await Conversation.findOne({
+    $or: [{ participantKey }, { participants: { $all: participants, $size: 2 } }]
+  });
 
-  const [result] = await pool.execute(
-    'INSERT INTO conversations (user1_id, user2_id) VALUES (?, ?)',
-    [user1, user2]
-  );
+  if (conversation) {
+    if (!conversation.participantKey) {
+      conversation.participantKey = participantKey;
+      await conversation.save();
+    }
+    return conversation;
+  }
 
-  return { id: result.insertId, user1_id: user1, user2_id: user2 };
+  try {
+    return await Conversation.create({
+      participants,
+      participantKey,
+      unreadCounts: { [participants[0]]: 0, [participants[1]]: 0 }
+    });
+  } catch (err) {
+    if (err.code === 11000) {
+      const existing = await Conversation.findOne({ participantKey });
+      if (existing) return existing;
+    }
+    throw err;
+  }
 };

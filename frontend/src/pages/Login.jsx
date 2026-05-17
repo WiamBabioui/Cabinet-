@@ -27,6 +27,7 @@ const Login = () => {
       const user = await login(email, password);
       if (user.role === 'medecin') navigate('/');
       else if (user.role === 'secretaire') navigate('/assistant-dashboard');
+      else if (user.role === 'patient') navigate('/patient-portal');
       else navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || t('auth.login.error'));

@@ -1,129 +1,139 @@
-import pool from '../config/db.mysql.js';
+import mongoose from 'mongoose';
 import { getSocket } from '../config/socket.js';
+import Notification from '../models/Notification.js';
+
+const serializeNotification = (notification) => {
+  const raw = notification.toObject ? notification.toObject() : notification;
+  return {
+    id: raw._id.toString(),
+    _id: raw._id.toString(),
+    userId: raw.userId,
+    type: raw.type,
+    title: raw.title,
+    message: raw.message,
+    data: raw.data || {},
+    isRead: !!raw.isRead,
+    readAt: raw.readAt,
+    createdAt: raw.createdAt,
+    updatedAt: raw.updatedAt
+  };
+};
 
 export const createNotification = async (userId, type, title, message, data = {}) => {
   try {
-    const [result] = await pool.execute(
-      `INSERT INTO notifications (destinataire_id, type, titre, corps, donnees_contexte)
-       VALUES (?, ?, ?, ?, ?)`,
-      [userId, type, title, message, JSON.stringify(data)]
-    );
-
-    const notificationId = result.insertId;
-
-    const newNotification = {
-      _id: notificationId,
-      userId,
+    const notification = await Notification.create({
+      userId: Number(userId),
       type,
       title,
       message,
-      data,
-      isRead: false,
-      createdAt: new Date()
-    };
+      data: data || {}
+    });
 
-    // Emit notification via Socket.IO
-    getSocket().to(`user_${userId}`).emit('new_notification', newNotification);
+    const serialized = serializeNotification(notification);
 
-    return newNotification;
+    // Emit real-time notification — gracefully skip if socket isn't ready yet
+    try {
+      getSocket().to(`user_${userId}`).emit('new_notification', serialized);
+    } catch {
+      // Socket not initialized yet (e.g. during startup) — notification still saved to DB
+    }
+
+    return serialized;
   } catch (err) {
-    console.error('❌ createNotification error:', err);
+    console.error('createNotification error:', err);
+    return null;
   }
 };
 
-// ─── GET /api/notifications ───────────────────────────────
 export const getNotifications = async (req, res) => {
   try {
-    const userId = req.user.id;
-    console.log(`🔔 Fetching notifications for user ${userId}`);
-    const [rows] = await pool.execute(
-      `SELECT id as _id, type, titre as title, corps as message, lu as isRead, donnees_contexte as data, created_at as createdAt
-       FROM notifications
-       WHERE destinataire_id = ?
-       ORDER BY created_at DESC
-       LIMIT 50`,
-      [userId]
-    );
+    const userId = Number(req.user.id);
+    const notifications = await Notification.find({ userId })
+      .sort({ createdAt: -1 })
+      .limit(50);
 
-    const notifications = rows.map(r => ({
-      ...r,
-      isRead: !!r.isRead,
-      data: r.data ? (typeof r.data === 'string' ? JSON.parse(r.data) : r.data) : {}
-    }));
+    const unread = await Notification.countDocuments({ userId, isRead: false });
 
-    const [countRows] = await pool.execute(
-      'SELECT COUNT(*) as unread FROM notifications WHERE destinataire_id = ? AND lu = 0',
-      [userId]
-    );
-
-    res.json({ notifications, unread: countRows[0].unread });
+    res.json({
+      notifications: notifications.map(serializeNotification),
+      unread
+    });
   } catch (err) {
-    console.error('❌ getNotifications error:', err);
+    console.error('getNotifications error:', err);
     res.status(500).json({ message: 'Erreur serveur', error: err.message });
   }
 };
 
-// ─── PATCH /api/notifications/:id/read ───────────────────
 export const markAsRead = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = Number(req.user.id);
 
-    await pool.execute(
-      'UPDATE notifications SET lu = 1, lu_le = NOW() WHERE id = ? AND destinataire_id = ?',
-      [id, userId]
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Notification invalide' });
+    }
+
+    const result = await Notification.updateOne(
+      { _id: id, userId },
+      { $set: { isRead: true, readAt: new Date() } }
     );
 
-    res.json({ message: 'Notification marquée comme lue' });
+    if (!result.matchedCount) {
+      return res.status(404).json({ message: 'Notification non trouvee ou non autorisee' });
+    }
+
+    res.json({ message: 'Notification marquee comme lue' });
   } catch (err) {
-    console.error('❌ markAsRead error:', err);
+    console.error('markAsRead error:', err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
 
-// ─── PATCH /api/notifications/read-all ───────────────────
 export const markAllAsRead = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = Number(req.user.id);
 
-    await pool.execute(
-      'UPDATE notifications SET lu = 1, lu_le = NOW() WHERE destinataire_id = ? AND lu = 0',
-      [userId]
+    await Notification.updateMany(
+      { userId, isRead: false },
+      { $set: { isRead: true, readAt: new Date() } }
     );
 
-    res.json({ message: 'Toutes les notifications marquées comme lues' });
+    res.json({ message: 'Toutes les notifications marquees comme lues' });
   } catch (err) {
-    console.error('❌ markAllAsRead error:', err);
+    console.error('markAllAsRead error:', err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
 
-// ─── DELETE /api/notifications/:id ───────────────────────
 export const deleteNotification = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = Number(req.user.id);
 
-    const [result] = await pool.execute(
-      'DELETE FROM notifications WHERE id = ? AND destinataire_id = ?',
-      [id, userId]
-    );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Notification non trouvée ou non autorisée' });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Notification invalide' });
     }
 
-    res.json({ message: 'Notification supprimée' });
+    const result = await Notification.deleteOne({ _id: id, userId });
+
+    if (!result.deletedCount) {
+      return res.status(404).json({ message: 'Notification non trouvee ou non autorisee' });
+    }
+
+    res.json({ message: 'Notification supprimee' });
   } catch (err) {
-    console.error('❌ deleteNotification error:', err);
+    console.error('deleteNotification error:', err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
 
-// ─── POST /api/notifications/create (Frontend triggered) ──────
 export const createNotificationFromFrontend = async (req, res) => {
   try {
-    const { type, title, message, data } = req.body;
+    const { type = 'info', title, message, data } = req.body;
+    if (!title || !message) {
+      return res.status(400).json({ message: 'Titre et message requis' });
+    }
+
     const notification = await createNotification(req.user.id, type, title, message, data);
     res.status(201).json({ notification });
   } catch (err) {

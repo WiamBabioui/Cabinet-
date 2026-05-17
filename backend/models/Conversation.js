@@ -6,6 +6,12 @@ const conversationSchema = new mongoose.Schema({
     required: true,
     validate: [arr => arr.length === 2, 'Conversation must have exactly 2 participants']
   },
+  participantKey: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true
+  },
   lastMessage: {
     type: String,
     maxLength: 100

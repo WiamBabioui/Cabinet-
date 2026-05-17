@@ -4,7 +4,21 @@ let io;
 
 export const initSocket = (httpServer) => {
   io = new Server(httpServer, {
-    cors: { origin: process.env.CLIENT_URL || 'http://localhost:5173' }
+    cors: {
+      origin: (origin, callback) => {
+        if (!origin || origin.startsWith('http://localhost:')) {
+          callback(null, true);
+        } else {
+          const allowed = process.env.CLIENT_URL || 'http://localhost:5173';
+          if (origin === allowed) {
+            callback(null, true);
+          } else {
+            callback(new Error('Blocked by CORS'));
+          }
+        }
+      },
+      credentials: true
+    }
   });
   return io;
 };

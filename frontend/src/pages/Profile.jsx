@@ -10,12 +10,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import Card from '../components/dashboard/Card';
+import Badge from '../components/common/Badge';
 import api from '../services/api';
 import { useTranslation } from 'react-i18next';
 import { twMerge } from 'tailwind-merge';
 
 const Profile = () => {
-  const { user, login } = useAuth();
+  const { user, updateUser } = useAuth();
   const { t, i18n } = useTranslation();
   
   const [activeTab, setTab] = useState('profil');
@@ -97,6 +98,7 @@ const Profile = () => {
       } else {
         await api.put(`/users/${user.id}`, form);
       }
+      updateUser?.({ prenom: form.prenom, nom: form.nom, telephone: form.telephone });
       setSuccess(t('profile.profile_saved'));
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
@@ -151,7 +153,7 @@ const Profile = () => {
   const tabs = [
     { key: 'profil',   label: t('profile.tabs.profile'), icon: User },
     { key: 'securite', label: t('profile.tabs.security'), icon: ShieldCheck },
-    ...(user?.role === 'medecin' ? [{ key: 'horaires', label: t('profile.tabs.schedule'), icon: Calendar }] : []),
+    ...(user?.role?.toLowerCase().trim() === 'medecin' ? [{ key: 'horaires', label: t('profile.tabs.schedule'), icon: Calendar }] : []),
   ];
 
   return (
@@ -262,7 +264,7 @@ const Profile = () => {
                        </div>
                        <Input label={t('profile.form.phone')} icon={Phone} value={form.telephone} onChange={e => setForm({...form, telephone: e.target.value})} />
 
-                       {user?.role === 'medecin' && (
+                       {user?.role?.toLowerCase().trim() === 'medecin' && (
                          <div className="space-y-8 pt-4 border-t border-slate-100">
                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               <div className="space-y-2">
@@ -337,7 +339,7 @@ const Profile = () => {
                    )}
 
                    {/* Schedule Tab */}
-                   {activeTab === 'horaires' && user?.role === 'medecin' && (
+                   {activeTab === 'horaires' && user?.role?.toLowerCase().trim() === 'medecin' && (
                      <div className="space-y-8">
                        <div className="flex items-center gap-3 mb-4">
                           <div className="w-10 h-10 bg-emerald/10 text-emerald rounded-xl flex items-center justify-center">
