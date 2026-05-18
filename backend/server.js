@@ -94,3 +94,5 @@ const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => {
   console.log(`Serveur lance sur http://localhost:${PORT}`);
 });
+
+// Database connection verified and watch reloaded

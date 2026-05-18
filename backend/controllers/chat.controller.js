@@ -199,14 +199,20 @@ export const getContacts = async (req, res) => {
       query = `
         SELECT DISTINCT u.id, u.prenom, u.nom, u.role, u.photo_url
         FROM utilisateurs u
-        WHERE u.role = 'medecin' AND u.actif = 1 AND u.deleted_at IS NULL
-        ORDER BY u.nom`;
+        WHERE (u.role = 'medecin' OR u.role = 'secretaire') 
+          AND u.actif = 1 
+          AND u.deleted_at IS NULL
+        ORDER BY u.role, u.nom`;
     } else if (userRole === 'secretaire') {
       query = `
-        SELECT u.id, u.prenom, u.nom, u.role, u.photo_url
+        SELECT DISTINCT u.id, u.prenom, u.nom, COALESCE(NULLIF(u.role, ''), 'patient') as role, u.photo_url
         FROM utilisateurs u
-        WHERE u.role = 'medecin' AND u.actif = 1 AND u.deleted_at IS NULL
-        ORDER BY u.nom`;
+        WHERE u.id != ?
+          AND (u.role = 'medecin' OR u.role = 'patient' OR u.role = '' OR u.role IS NULL)
+          AND u.actif = 1
+          AND u.deleted_at IS NULL
+        ORDER BY u.role, u.nom`;
+      params = [id];
     } else {
       return res.json({ contacts: [] });
     }
