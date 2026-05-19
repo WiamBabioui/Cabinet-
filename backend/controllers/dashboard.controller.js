@@ -49,7 +49,7 @@ export const getDashboardStats = async (req, res) => {
    FROM patients
    WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
    AND deleted_at IS NULL
-   GROUP BY DATE_FORMAT(created_at, '%Y-%m'), DATE_FORMAT(created_at, '%b')
+   GROUP BY DATE_FORMAT(created_at, '%Y-%m'), DATE_FORMAT(created_at, '%b'), DATE_FORMAT(created_at, '%b')
    ORDER BY mois ASC`
 );
 
