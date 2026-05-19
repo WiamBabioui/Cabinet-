@@ -42,16 +42,16 @@ export const getDashboardStats = async (req, res) => {
 
     // Patients par mois (6 derniers mois) pour le graphique
     const [patients_par_mois] = await pool.execute(
-      `SELECT
-        DATE_FORMAT(created_at, '%Y-%m') as mois,
-        DATE_FORMAT(created_at, '%b') as label,
-        COUNT(*) as total
-       FROM patients
-       WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-       AND deleted_at IS NULL
-       GROUP BY DATE_FORMAT(created_at, '%Y-%m')
-       ORDER BY mois ASC`
-    );
+  `SELECT
+    DATE_FORMAT(created_at, '%Y-%m') as mois,
+    DATE_FORMAT(created_at, '%b') as label,
+    COUNT(*) as total
+   FROM patients
+   WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+   AND deleted_at IS NULL
+   GROUP BY DATE_FORMAT(created_at, '%Y-%m'), DATE_FORMAT(created_at, '%b')
+   ORDER BY mois ASC`
+);
 
     // Répartition par sexe
     const [repartition_sexe] = await pool.execute(
