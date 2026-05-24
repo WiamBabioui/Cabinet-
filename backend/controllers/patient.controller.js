@@ -46,7 +46,7 @@ export const getPatients = async (req, res) => {
        ${whereClause}
        ORDER BY p.created_at DESC
        LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), parseInt(offset)]
+      [...params, Number(limit), Number(offset)]
     );
 
     res.json({
@@ -340,4 +340,4 @@ export const getPortalData = async (req, res) => {
     console.error('getPortalData error:', err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
-};
+};
