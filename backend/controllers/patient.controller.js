@@ -1,5 +1,5 @@
 import pool from '../config/db.mysql.js';
-import crypto from 'crypto'; // Nécessaire pour générer l'UUID
+import crypto from 'crypto';
 
 // ✅ Générer un numéro de dossier unique
 const generateNumDossier = () => {
@@ -9,10 +9,9 @@ const generateNumDossier = () => {
   return `DOS-${year}-${rand}`;
 };
 
-// ✅ LISTE des patients (Correction du bug de pagination)
+// ✅ LISTE des patients (Pagination fixée)
 export const getPatients = async (req, res) => {
   try {
-    // Conversion forcée en nombres pour éviter l'erreur MySQL
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const search = req.query.search || '';
@@ -33,14 +32,9 @@ export const getPatients = async (req, res) => {
       params.push(statut);
     }
 
-    // 1. Compter le total pour la pagination
-    const [countResult] = await pool.execute(
-      `SELECT COUNT(*) as total FROM patients p ${whereClause}`,
-      params
-    );
+    const [countResult] = await pool.execute(`SELECT COUNT(*) as total FROM patients p ${whereClause}`, params);
     const total = countResult[0].total;
 
-    // 2. Récupérer les patients (On passe limit et offset comme de vrais nombres)
     const sql = `
       SELECT p.id, p.uuid, p.num_dossier, p.prenom, p.nom, p.date_naissance,
              p.sexe, p.telephone, p.email, p.adresse_ville, p.groupe_sanguin,
@@ -57,21 +51,15 @@ export const getPatients = async (req, res) => {
 
     res.json({
       patients,
-      pagination: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit)
-      }
+      pagination: { total, page, limit, pages: Math.ceil(total / limit) }
     });
-
   } catch (err) {
     console.error('getPatients error:', err);
-    res.status(500).json({ message: 'Erreur lors de la récupération des données' });
+    res.status(500).json({ message: 'Erreur serveur' });
   }
 };
 
-// ✅ CRÉER un patient (Ajout du UUID pour que l'enregistrement fonctionne)
+// ✅ CRÉER un patient (FIX : Colonnes et valeurs alignées)
 export const createPatient = async (req, res) => {
   const {
     prenom, nom, date_naissance, sexe, telephone,
@@ -82,43 +70,40 @@ export const createPatient = async (req, res) => {
 
   try {
     const num_dossier = generateNumDossier();
-    const uuid = crypto.randomUUID(); // Génération d'un UUID unique
+    const uuid = crypto.randomUUID();
 
-    const [result] = await pool.execute(
-      `INSERT INTO patients
+    // On définit 19 colonnes
+    const sql = `INSERT INTO patients
         (uuid, num_dossier, prenom, nom, date_naissance, sexe, telephone, email, cin,
          adresse_rue, adresse_ville, adresse_code_postal, adresse_pays,
          groupe_sanguin, assurance_nom, assurance_numero,
          medecin_traitant_id, notes_admin, statut)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'actif')`,
-      [
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`; // 19 points d'interrogation
+
+    // On envoie 19 valeurs dans le tableau
+    const values = [
         uuid, num_dossier, prenom, nom, date_naissance, sexe, telephone,
         email || null, cin || null, adresse_rue || null, adresse_ville || null,
         adresse_code_postal || null, adresse_pays || 'Maroc',
         groupe_sanguin || null, assurance_nom || null, assurance_numero || null,
-        medecin_traitant_id || null, notes_admin || null
-      ]
-    );
+        medecin_traitant_id || null, notes_admin || null, 'actif'
+    ];
 
+    const [result] = await pool.execute(sql, values);
     const patientId = result.insertId;
 
-    // Créer automatiquement le dossier médical vide
-    await pool.execute(
-      'INSERT INTO dossiers_medicaux (patient_id) VALUES (?)',
-      [patientId]
-    );
+    // Création automatique du dossier médical
+    await pool.execute('INSERT INTO dossiers_medicaux (patient_id) VALUES (?)', [patientId]);
 
-    res.status(201).json({
-      message: 'Patient créé avec succès',
-      patient_id: patientId,
-      num_dossier
-    });
+    res.status(201).json({ message: 'Patient créé avec succès', patient_id: patientId, num_dossier });
 
   } catch (err) {
     console.error('createPatient error:', err);
     res.status(500).json({ message: 'Erreur lors de la création : ' + err.message });
   }
 };
+
+// ... (Gardez le reste des fonctions getPatientById, updatePatient, etc. tel quel)
 
 // ✅ UN SEUL patient avec son dossier médical
 export const getPatientById = async (req, res) => {
