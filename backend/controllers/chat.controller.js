@@ -186,45 +186,46 @@ export const getContacts = async (req, res) => {
     let query;
     let params = [];
 
+    // Correction : Utilisation de backticks `role` car c'est un mot réservé MySQL 8
     if (userRole === 'medecin') {
       query = `
-        SELECT DISTINCT u.id, u.prenom, u.nom, COALESCE(NULLIF(u.role, ''), 'patient') as role, u.photo_url
+        SELECT DISTINCT u.id, u.prenom, u.nom, COALESCE(NULLIF(u.role, ''), 'patient') as \`role\`, u.photo_url
         FROM utilisateurs u
         WHERE u.id != ?
           AND (u.role = 'patient' OR u.role = 'secretaire' OR u.role = '' OR u.role IS NULL)
           AND u.actif = 1
           AND u.deleted_at IS NULL
-        ORDER BY u.role, u.nom`;
+        ORDER BY \`role\`, u.nom`;
       params = [userId];
     } else if (userRole === 'patient' || !userRole) {
       query = `
-        SELECT DISTINCT u.id, u.prenom, u.nom, u.role, u.photo_url
+        SELECT DISTINCT u.id, u.prenom, u.nom, u.role as \`role\`, u.photo_url
         FROM utilisateurs u
         WHERE (u.role = 'medecin' OR u.role = 'secretaire') 
           AND u.actif = 1 
           AND u.deleted_at IS NULL
-        ORDER BY u.role, u.nom`;
+        ORDER BY \`role\`, u.nom`;
         params = [];
     } else if (userRole === 'secretaire') {
       query = `
-        SELECT DISTINCT u.id, u.prenom, u.nom, COALESCE(NULLIF(u.role, ''), 'patient') as role, u.photo_url
+        SELECT DISTINCT u.id, u.prenom, u.nom, COALESCE(NULLIF(u.role, ''), 'patient') as \`role\`, u.photo_url
         FROM utilisateurs u
         WHERE u.id != ?
           AND (u.role = 'medecin' OR u.role = 'patient' OR u.role = '' OR u.role IS NULL)
           AND u.actif = 1
           AND u.deleted_at IS NULL
-        ORDER BY u.role, u.nom`;
+        ORDER BY \`role\`, u.nom`;
       params = [userId];
     } else {
       return res.json({ contacts: [] });
     }
 
-    // Changement de execute vers query pour corriger l'erreur 500
     const [contacts] = await pool.query(query, params);
     res.json({ contacts });
   } catch (err) {
     console.error('getContacts error:', err);
-    res.status(500).json({ message: 'Erreur serveur', error: err.message });
+    // On renvoie l'erreur détaillée pour aider au debug
+    res.status(500).json({ message: 'Erreur serveur contacts', error: err.message });
   }
 };
 
@@ -255,15 +256,15 @@ export const deleteMessage = async (req, res) => {
 
 const getUserDetails = async (userId) => {
   try {
-    // Changement de execute vers query pour corriger l'erreur 500
     const [rows] = await pool.query(
-      `SELECT id, prenom, nom, COALESCE(NULLIF(role, ''), 'patient') as role, photo_url
+      `SELECT id, prenom, nom, COALESCE(NULLIF(role, ''), 'patient') as \`role\`, photo_url
        FROM utilisateurs
        WHERE id = ? AND actif = 1 AND deleted_at IS NULL`,
       [normalizeId(userId)]
     );
     return rows[0] || null;
   } catch (err) {
+    console.error("getUserDetails error:", err.message);
     return null;
   }
 };
