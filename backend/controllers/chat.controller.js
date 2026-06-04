@@ -180,6 +180,7 @@ export const sendMessage = async (req, res) => {
 export const getContacts = async (req, res) => {
   const { role, id } = req.user;
   const userRole = role?.toLowerCase().trim();
+  const userId = normalizeId(id);
 
   try {
     let query;
@@ -194,7 +195,7 @@ export const getContacts = async (req, res) => {
           AND u.actif = 1
           AND u.deleted_at IS NULL
         ORDER BY u.role, u.nom`;
-      params = [id];
+      params = [userId];
     } else if (userRole === 'patient' || !userRole) {
       query = `
         SELECT DISTINCT u.id, u.prenom, u.nom, u.role, u.photo_url
@@ -203,6 +204,7 @@ export const getContacts = async (req, res) => {
           AND u.actif = 1 
           AND u.deleted_at IS NULL
         ORDER BY u.role, u.nom`;
+        params = [];
     } else if (userRole === 'secretaire') {
       query = `
         SELECT DISTINCT u.id, u.prenom, u.nom, COALESCE(NULLIF(u.role, ''), 'patient') as role, u.photo_url
@@ -212,12 +214,13 @@ export const getContacts = async (req, res) => {
           AND u.actif = 1
           AND u.deleted_at IS NULL
         ORDER BY u.role, u.nom`;
-      params = [id];
+      params = [userId];
     } else {
       return res.json({ contacts: [] });
     }
 
-    const [contacts] = await pool.execute(query, params);
+    // Changement de execute vers query pour corriger l'erreur 500
+    const [contacts] = await pool.query(query, params);
     res.json({ contacts });
   } catch (err) {
     console.error('getContacts error:', err);
@@ -251,13 +254,18 @@ export const deleteMessage = async (req, res) => {
 };
 
 const getUserDetails = async (userId) => {
-  const [rows] = await pool.execute(
-    `SELECT id, prenom, nom, COALESCE(NULLIF(role, ''), 'patient') as role, photo_url
-     FROM utilisateurs
-     WHERE id = ? AND actif = 1 AND deleted_at IS NULL`,
-    [userId]
-  );
-  return rows[0] || null;
+  try {
+    // Changement de execute vers query pour corriger l'erreur 500
+    const [rows] = await pool.query(
+      `SELECT id, prenom, nom, COALESCE(NULLIF(role, ''), 'patient') as role, photo_url
+       FROM utilisateurs
+       WHERE id = ? AND actif = 1 AND deleted_at IS NULL`,
+      [normalizeId(userId)]
+    );
+    return rows[0] || null;
+  } catch (err) {
+    return null;
+  }
 };
 
 const getOrCreateConversation = async (user1, user2) => {
