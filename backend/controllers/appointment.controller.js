@@ -119,6 +119,13 @@ export const getAppointmentById = async (req, res) => {
   }
 };
 
+// ─── Helper: format a JS Date as 'YYYY-MM-DD HH:MM:SS' in LOCAL time (no UTC shift)
+const toLocalSQLString = (date) => {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
+         `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+};
+
 // ─── Create appointment ────────────────────────────────────
 export const createAppointment = async (req, res) => {
   const { patient_email, medecin_id: bodyMedecinId, date_heure, duree = 30, type_rdv = 'suivi', motif, notes } = req.body;
@@ -145,12 +152,14 @@ export const createAppointment = async (req, res) => {
     }
     const patient_id = patientRows[0].id;
 
-    // 3. Calculate date_heure_fin
+    // 3. Calculate date_heure_fin — parse as LOCAL time (avoid UTC shift from toISOString)
     const parsedDuree = parseInt(duree) || 30;
+    // date_heure arrives as 'YYYY-MM-DDTHH:mm:ss' or 'YYYY-MM-DDTHH:mm'
+    // new Date('YYYY-MM-DDTHH:mm') is parsed as LOCAL time in Node.js
     const startDate = new Date(date_heure);
-    const endDate = new Date(startDate.getTime() + parsedDuree * 60000);
-    const date_heure_fin = endDate.toISOString().slice(0, 19).replace('T', ' ');
-    const date_heure_debut = startDate.toISOString().slice(0, 19).replace('T', ' ');
+    const endDate   = new Date(startDate.getTime() + parsedDuree * 60000);
+    const date_heure_debut = toLocalSQLString(startDate);
+    const date_heure_fin   = toLocalSQLString(endDate);
 
     // 4. Prevent overlapping
     const [overlap] = await pool.execute(
@@ -186,7 +195,7 @@ export const createAppointment = async (req, res) => {
 
     // 6. Notifications
     await createNotification(req.user.id, 'appointment_new',
-      'Nouveau rendez-vous', `Le rendez-vous du ${new Date(date_heure).toLocaleDateString('fr-FR')} a été créé.`,
+      'Nouveau rendez-vous', `Le rendez-vous du ${startDate.toLocaleDateString('fr-FR')} a été créé.`,
       { appointment_id: apptId }
     );
 
@@ -222,7 +231,7 @@ export const updateAppointment = async (req, res) => {
       const start = new Date(date_heure || rdv.date_heure_debut);
       const d = parseInt(duree) || 30;
       const end = new Date(start.getTime() + d * 60000);
-      date_heure_fin = end.toISOString().slice(0, 19).replace('T', ' ');
+      date_heure_fin = toLocalSQLString(end);
     }
 
     await pool.execute(

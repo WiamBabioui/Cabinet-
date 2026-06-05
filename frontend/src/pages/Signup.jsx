@@ -61,24 +61,28 @@ const Signup = () => {
   return (
     <div className="w-full max-w-sm mx-auto">
       <div className="mb-6">
-        <h2 className="text-3xl font-bold text-slate-800">{t('auth.signup.title')}</h2>
-        <p className="text-slate-500 mt-2">{t('auth.signup.subtitle')}</p>
+        <h2 className="text-3xl font-black text-slate-800 tracking-tight leading-none mb-3">
+          {t('auth.signup.title')}
+        </h2>
+        <p className="text-slate-500 text-base font-medium leading-relaxed">
+          {t('auth.signup.subtitle')}
+        </p>
       </div>
 
       {/* Sélection du rôle */}
-      <div className="flex gap-2 mb-6 p-1 bg-slate-100 rounded-2xl">
+      <div className="flex gap-2 mb-6 p-1.5 bg-slate-100/80 rounded-2xl border border-slate-200/50">
         {roles.map((r) => (
           <button
             key={r.name}
             onClick={() => setRole(r.name)}
             type="button"
-            className={`flex-1 flex flex-col items-center justify-center py-2 rounded-xl text-xs font-bold transition-all gap-1 ${
+            className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all gap-1.5 ${
               role === r.name
-                ? 'bg-white text-primary shadow-sm'
-                : 'text-slate-500 hover:text-slate-800'
+                ? 'bg-white text-purple shadow-sm border border-slate-100'
+                : 'text-slate-500 hover:text-slate-800 hover:bg-white/30'
             }`}
           >
-            <r.icon size={16} />
+            <r.icon size={15} />
             {r.label}
           </button>
         ))}
@@ -86,61 +90,68 @@ const Signup = () => {
 
       {/* Erreur */}
       {error && (
-        <div className="flex items-center gap-3 p-4 mb-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+        <div className="flex items-center gap-3 p-4 mb-5 bg-coral/5 border border-coral/20 rounded-2xl text-coral text-sm font-semibold">
           <AlertCircle size={18} className="flex-shrink-0" />
           {error}
         </div>
       )}
 
-      <form onSubmit={handleSignup} className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <Input label={t('auth.signup.firstname')} name="prenom" placeholder="Mohammed" icon={User}
+      <form onSubmit={handleSignup} className="space-y-5">
+        <div className="grid grid-cols-2 gap-4">
+          <Input label={t('auth.signup.firstname')} name="prenom" icon={User}
             value={form.prenom} onChange={handleChange} required />
-          <Input label={t('auth.signup.lastname')} name="nom" placeholder="Alami" icon={User}
+          <Input label={t('auth.signup.lastname')} name="nom" icon={User}
             value={form.nom} onChange={handleChange} required />
         </div>
 
-        <Input label={t('auth.login.email_label')} name="email" type="email" placeholder={t('auth.login.email_placeholder')} icon={Mail}
+        <Input label={t('auth.login.email_label')} name="email" type="email" icon={Mail}
           value={form.email} onChange={handleChange} required />
 
-        <Input label={t('auth.login.password_label')} name="mot_de_passe" type="password" placeholder="••••••••" icon={Lock}
+        <Input label={t('auth.login.password_label')} name="mot_de_passe" type="password" icon={Lock}
           value={form.mot_de_passe} onChange={handleChange} required />
 
-        <Input label={t('users.modal.phone')} name="telephone" placeholder="+212 6XX XXX XXX" icon={User}
+        <Input label={t('users.modal.phone')} name="telephone" icon={User}
           value={form.telephone} onChange={handleChange} />
 
         {/* Champs spécifiques au médecin */}
         {role === 'medecin' && (
-          <>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">{t('users.modal.specialty')}</label>
+          <div className="space-y-5">
+            <div className="relative group">
               <select
                 name="specialite_id"
                 value={form.specialite_id}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full bg-white/50 border border-slate-200/50 rounded-2xl px-5 pt-8 pb-3 outline-none transition-all duration-300 font-medium text-slate-700 focus:bg-white focus:border-purple focus:ring-4 focus:ring-purple/20 appearance-none"
               >
                 <option value="">{t('users.modal.specialty_select')}</option>
                 {specialites.map(s => (
                   <option key={s.id} value={s.id}>{s.libelle}</option>
                 ))}
               </select>
+              <label className="absolute start-5 top-2.5 text-[9px] font-black text-slate-400 uppercase tracking-widest pointer-events-none">
+                {t('users.modal.specialty')}
+              </label>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+              </div>
             </div>
-            <Input label={t('users.modal.order_num')} name="num_ordre" placeholder="Ex: MA-2024-12345" icon={ShieldCheck}
+            <Input label={t('users.modal.order_num')} name="num_ordre" icon={ShieldCheck}
               value={form.num_ordre} onChange={handleChange} required />
-          </>
+          </div>
         )}
 
-        <Button type="submit" className="w-full" isLoading={loading} icon={ArrowRight}>
-          {t('auth.signup.submit')}
-        </Button>
+        <div className="pt-2">
+          <Button type="submit" className="w-full h-14 uppercase tracking-widest font-black text-xs" isLoading={loading} icon={ArrowRight}>
+            {t('auth.signup.submit')}
+          </Button>
+        </div>
       </form>
 
-      <div className="mt-6 text-center">
-        <p className="text-sm text-slate-500">
+      <div className="mt-8 text-center">
+        <p className="text-base text-slate-500 font-medium">
           {t('auth.signup.has_account')}{' '}
-          <Link to="/auth/login" className="font-bold text-primary hover:underline">
+          <Link to="/auth/login" className="font-black text-purple hover:text-purple/70 transition-colors">
             {t('auth.signup.login_link')}
           </Link>
         </p>

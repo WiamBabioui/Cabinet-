@@ -144,19 +144,32 @@ const Appointments = () => {
             <p className="text-slate-500 mt-3 font-medium text-lg">{t('appointments.subtitle')}</p>
           </div>
           
-          <div className="flex gap-4 items-center bg-white/40 backdrop-blur-md p-2 rounded-[2rem] border border-white/60 shadow-soft">
-            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => navigateWeek(-1)} className="p-3 text-slate-400 hover:text-purple transition-colors">
-              <ChevronLeft size={20} strokeWidth={3} />
-            </motion.button>
-            <div className="flex items-center gap-3 px-6 py-2 bg-white rounded-2xl shadow-sm border border-slate-100 min-w-[200px] justify-center">
-              <CalendarIcon size={18} className="text-purple" />
-              <span className="font-black text-sm text-slate-800 uppercase tracking-widest whitespace-nowrap">
-                {new Date(selectedDate).toLocaleDateString(i18n.language === 'ar' ? 'ar-MA' : 'fr-FR', { month: 'long', year: 'numeric' })}
-              </span>
+          <div className="flex gap-4 items-center">
+            {(user?.role === 'medecin' || user?.role === 'secretaire') && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => { setModalInitialTime('09:00'); setIsModalOpen(true); }}
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple to-indigo text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-glow transition-all"
+              >
+                <Plus size={18} strokeWidth={3} />
+                Nouveau RDV
+              </motion.button>
+            )}
+            <div className="flex items-center bg-white/40 backdrop-blur-md p-2 rounded-[2rem] border border-white/60 shadow-soft">
+              <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => navigateWeek(-1)} className="p-3 text-slate-400 hover:text-purple transition-colors">
+                <ChevronLeft size={20} strokeWidth={3} />
+              </motion.button>
+              <div className="flex items-center gap-3 px-6 py-2 bg-white rounded-2xl shadow-sm border border-slate-100 min-w-[200px] justify-center">
+                <CalendarIcon size={18} className="text-purple" />
+                <span className="font-black text-sm text-slate-800 uppercase tracking-widest whitespace-nowrap">
+                  {new Date(selectedDate).toLocaleDateString(i18n.language === 'ar' ? 'ar-MA' : 'fr-FR', { month: 'long', year: 'numeric' })}
+                </span>
+              </div>
+              <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => navigateWeek(1)} className="p-3 text-slate-400 hover:text-purple transition-colors">
+                <ChevronRight size={20} strokeWidth={3} />
+              </motion.button>
             </div>
-            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => navigateWeek(1)} className="p-3 text-slate-400 hover:text-purple transition-colors">
-              <ChevronRight size={20} strokeWidth={3} />
-            </motion.button>
           </div>
         </div>
 
@@ -294,7 +307,7 @@ const Appointments = () => {
                             </div>
                           ) : (
                             <div className="h-20 border-2 border-dashed border-slate-100/50 rounded-3xl flex items-center justify-center group/btn opacity-0 group-hover:opacity-100 transition-all">
-                              {user?.role === 'medecin' && (
+                              {(user?.role === 'medecin' || user?.role === 'secretaire') && (
                                 <motion.button 
                                   whileHover={{ scale: 1.02 }}
                                   onClick={() => {

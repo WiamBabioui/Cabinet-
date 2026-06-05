@@ -320,15 +320,19 @@ const resources = {
       },
       "auth": {
         "layout": {
-          "title": "Smart Medical Cabinet",
-          "subtitle": "L'approche moderne pour gérer votre établissement de santé avec efficacité et soin.",
-          "quote": "\"Ce système a révolutionné notre façon de suivre les dossiers des patients et de gérer les rendez-vous quotidiens.\"",
-          "quote_author": "Dr. Sarah Johnson",
-          "quote_role": "Médecin Chef"
+          "title": "La plateforme de coordination et de gestion clinique",
+          "subtitle": "Conçu pour les praticiens marocains. Centralisez vos dossiers patients, synchronisez en temps réel le secrétariat et le cabinet, et gérez vos consultations.",
+          "quote": "Avec la synchronisation instantanée de Cabinet+, notre secrétariat gère les rendez-vous et la facturation en toute fluidité, nous permettant de nous concentrer pleinement sur les soins.",
+          "quote_author": "Dr. Yassine El Amrani",
+          "quote_role": "Cardiologue — Casablanca",
+          "feat_ehr": "Dossier Patient Unique",
+          "feat_sync": "Flux Cabinet-Secrétariat",
+          "feat_security": "Confidentialité & Chiffrement",
+          "feat_continuity": "Suivi Clinique Continu"
         },
         "login": {
-          "title": "Bienvenue",
-          "subtitle": "Connectez-vous à votre espace Cabinet+",
+          "title": "Espace Praticien",
+          "subtitle": "Connectez-vous pour accéder à vos dossiers et planifications.",
           "email_label": "Adresse Email",
           "email_placeholder": "exemple@cabinet.ma",
           "password_label": "Mot de passe",
@@ -340,13 +344,13 @@ const resources = {
           "signup_link": "Créer un compte"
         },
         "signup": {
-          "title": "Créer un compte",
-          "subtitle": "Rejoignez la plateforme Cabinet+ dès aujourd'hui",
+          "title": "Rejoindre le réseau Cabinet+",
+          "subtitle": "Inscrivez votre cabinet médical ou accédez à votre espace patient.",
           "firstname": "Prénom",
           "lastname": "Nom",
-          "submit": "S'inscrire",
-          "has_account": "Déjà un compte ?",
-          "login_link": "Se connecter"
+          "submit": "Créer le profil",
+          "has_account": "Déjà membre ?",
+          "login_link": "S'identifier"
         }
       },
       "portal": {
@@ -720,15 +724,19 @@ const resources = {
       },
       "auth": {
         "layout": {
-          "title": "Smart Medical Cabinet",
-          "subtitle": "The modern approach to managing your healthcare facility with efficiency and care.",
-          "quote": "\"This system has revolutionized how we track patient histories and manage daily appointments.\"",
-          "quote_author": "Dr. Sarah Johnson",
-          "quote_role": "Chief Medical Officer"
+          "title": "Clinical Management & Care Coordination",
+          "subtitle": "Tailored for Moroccan healthcare providers. Centralize electronic health records (EHR), streamline doctor-secretary workflows, and access secure clinic coordination.",
+          "quote": "Thanks to Cabinet+ real-time sync, our front desk manages the booking flow and billing seamlessly, leaving us free to focus entirely on patient care.",
+          "quote_author": "Dr. Yassine El Amrani",
+          "quote_role": "Cardiologist — Casablanca",
+          "feat_ehr": "Single Electronic Record",
+          "feat_sync": "Secretary-Doctor Sync",
+          "feat_security": "Encrypted Health Data",
+          "feat_continuity": "Continuous Clinical Follow-up"
         },
         "login": {
-          "title": "Welcome",
-          "subtitle": "Sign in to your Cabinet+ space",
+          "title": "Clinic Workspace",
+          "subtitle": "Enter your credentials to access your schedule and patient files.",
           "email_label": "Email Address",
           "email_placeholder": "example@cabinet.ma",
           "password_label": "Password",
@@ -740,13 +748,13 @@ const resources = {
           "signup_link": "Create an account"
         },
         "signup": {
-          "title": "Create an Account",
-          "subtitle": "Join the Cabinet+ platform today",
+          "title": "Register on Cabinet+",
+          "subtitle": "Set up your medical practice or access your patient portal.",
           "firstname": "First Name",
           "lastname": "Last Name",
-          "submit": "Sign Up",
-          "has_account": "Already have an account?",
-          "login_link": "Log In"
+          "submit": "Register Account",
+          "has_account": "Already a member?",
+          "login_link": "Sign In"
         }
       },
       "portal": {
@@ -1120,15 +1128,19 @@ const resources = {
       },
       "auth": {
         "layout": {
-          "title": "سمارت ميديكال كابينت",
-          "subtitle": "النهج الحديث لإدارة منشأتك الصحية بكفاءة وعناية.",
-          "quote": "\"لقد أحدث هذا النظام ثورة في كيفية تتبعنا لسجلات المرضى وإدارة المواعيد اليومية.\"",
-          "quote_author": "د. سارة جونسون",
-          "quote_role": "كبير الأطباء"
+          "title": "منصة التنسيق الطبي وإدارة العيادات",
+          "subtitle": "مصممة خصيصاً للممارسين الطبيين بالمغرب. مركزة الملفات الطبية الرقمية، وتسهيل التنسيق الفوري بين الطبيب والسكرتارية.",
+          "quote": "بفضل المزامنة الفورية لـ Cabinet+، تُدير السكرتارية المواعيد والفوترة بسلاسة تامة، مما يتيح لنا التركيز الكامل على جودة الرعاية الطبية.",
+          "quote_author": "د. ياسين العمراني",
+          "quote_role": "أخصائي أمراض القلب — الدار البيضاء",
+          "feat_ehr": "ملف طبي موحد للمريض",
+          "feat_sync": "مزامنة الطبيب والسكرتارية",
+          "feat_security": "تشفير البيانات الطبية",
+          "feat_continuity": "متابعة سريرية مستمرة"
         },
         "login": {
-          "title": "مرحباً بكم",
-          "subtitle": "سجل الدخول إلى مساحة Cabinet+ الخاصة بك",
+          "title": "الفضاء المهني",
+          "subtitle": "سجل الدخول للولوج إلى جدول المواعيد وملفات المرضى.",
           "email_label": "البريد الإلكتروني",
           "email_placeholder": "exemple@cabinet.ma",
           "password_label": "كلمة المرور",
@@ -1140,12 +1152,12 @@ const resources = {
           "signup_link": "إنشاء حساب"
         },
         "signup": {
-          "title": "إنشاء حساب",
-          "subtitle": "انضم إلى منصة Cabinet+ اليوم",
+          "title": "الانضمام إلى Cabinet+",
+          "subtitle": "أنشئ حساب عيادتك الطبية أو قم بالولوج لفضاء المريض الخاص بك.",
           "firstname": "الاسم الشخصي",
           "lastname": "الاسم العائلي",
           "submit": "إنشاء الحساب",
-          "has_account": "لديك حساب بالفعل؟",
+          "has_account": "مسجل بالفعل؟",
           "login_link": "تسجيل الدخول"
         }
       },

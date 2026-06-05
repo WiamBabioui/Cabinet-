@@ -38,44 +38,74 @@ const serializeMessage = async (message) => {
 };
 
 const serializeConversation = async (conversation, userId) => {
-  if (!Array.isArray(conversation.participants) || conversation.participants.length !== 2) {
-    return null;
-  }
+  const parts = conversation.participants;
+  if (!Array.isArray(parts) || parts.length < 2) return null;
 
-  const otherUserId = conversation.participants.find((id) => id !== userId);
-  const otherUser = await getUserDetails(otherUserId);
+  // Explicit Number coercion ensures === works regardless of BSON/JS type
+  const userIdNum = Number(userId);
+  if (isNaN(userIdNum)) return null;
+
+  const otherUserId = parts.find((id) => Number(id) !== userIdNum);
+  if (otherUserId == null) return null;
+
+  const otherUser = await getUserDetails(Number(otherUserId));
   if (!otherUser) return null;
+
+  const lastMsgAt = conversation.lastMessageAt || conversation.updatedAt;
 
   return {
     id: conversation._id.toString(),
     _id: conversation._id.toString(),
-    participants: conversation.participants,
+    participants: parts.map(Number),
     other_user: otherUser,
     lastMessage: { text: conversation.lastMessage || '' },
     lastMessageText: conversation.lastMessage || '',
-    updatedAt: conversation.lastMessageAt || conversation.updatedAt,
-    unread_count: Number(conversation.unreadCounts?.get(String(userId)) || 0)
+    updatedAt: lastMsgAt,
+    lastMessageAt: lastMsgAt,
+    unread_count: Number(conversation.unreadCounts?.get(String(userIdNum)) ?? 0),
   };
 };
 
 export const getConversations = async (req, res) => {
   const userId = normalizeId(req.user.id);
+  const userRole = req.user.role?.toLowerCase().trim();
+  if (isNaN(userId)) {
+    return res.status(400).json({ message: 'Utilisateur invalide' });
+  }
 
   try {
     const conversations = await Conversation.find({ participants: userId })
       .sort({ lastMessageAt: -1, updatedAt: -1 })
       .limit(50);
 
+    console.log(`[chat] getConversations: userId=${userId}, raw=${conversations.length}`);
+
     const conversationsWithDetails = await Promise.all(
-      conversations.map((conversation) => serializeConversation(conversation, userId))
+      conversations.map((conv) => serializeConversation(conv, userId))
     );
 
-    res.json({ conversations: conversationsWithDetails.filter(Boolean) });
+    let filtered = conversationsWithDetails.filter(Boolean);
+
+    // Patients must only chat with medecin/secretaire — remove patient-to-patient convs
+    if (userRole === 'patient') {
+      filtered = filtered.filter((conv) => {
+        const otherRole = conv.other_user?.role?.toLowerCase().trim();
+        return otherRole === 'medecin' || otherRole === 'secretaire';
+      });
+    }
+
+    console.log(`[chat] getConversations: serialized=${filtered.length}`);
+
+    res.json({ conversations: filtered });
   } catch (err) {
     console.error('getConversations error:', err);
-    res.status(500).json({ message: 'Erreur serveur' });
+    res.status(500).json({
+      message: 'Erreur serveur',
+      ...(process.env.NODE_ENV === 'development' && { error: err.message }),
+    });
   }
 };
+
 
 export const getMessages = async (req, res) => {
   const meId = normalizeId(req.user.id);
@@ -84,6 +114,9 @@ export const getMessages = async (req, res) => {
 
   if (Number.isNaN(otherId)) {
     return res.status(400).json({ message: 'Utilisateur invalide' });
+  }
+  if (Number.isNaN(meId)) {
+    return res.status(400).json({ message: 'Utilisateur authentifié invalide' });
   }
 
   try {
@@ -95,14 +128,17 @@ export const getMessages = async (req, res) => {
 
     if (before) filter.createdAt = { $lt: new Date(before) };
 
+    const limitNum = Math.min(normalizeId(limit) || 50, 100);
     const messages = await Message.find(filter)
       .sort({ createdAt: -1 })
-      .limit(Math.min(normalizeId(limit) || 50, 100));
+      .limit(limitNum);
 
+    // Mark received messages as seen
     await Message.updateMany(
       { conversationId: conversation._id, senderId: otherId, receiverId: meId, seen: false },
       { $set: { seen: true, seenAt: new Date() } }
     );
+    // Reset unread count for the current user
     await Conversation.updateOne(
       { _id: conversation._id },
       { $set: { [`unreadCounts.${meId}`]: 0 } }
@@ -114,11 +150,14 @@ export const getMessages = async (req, res) => {
       messages: serialized,
       conversation_id: conversation._id.toString(),
       conversationId: conversation._id.toString(),
-      other_user: otherUser
+      other_user: otherUser,
     });
   } catch (err) {
     console.error('getMessages error:', err);
-    res.status(500).json({ message: 'Erreur serveur' });
+    res.status(500).json({
+      message: 'Erreur serveur',
+      ...(process.env.NODE_ENV === 'development' && { error: err.message }),
+    });
   }
 };
 
@@ -127,6 +166,7 @@ export const sendMessage = async (req, res) => {
   const senderId = normalizeId(req.user.id);
   const receiver = normalizeId(destinataire_id ?? receiverId);
   const text = String(contenu ?? content ?? '').trim();
+  const senderRole = req.user.role?.toLowerCase().trim();
 
   if (Number.isNaN(receiver)) return res.status(400).json({ message: 'Destinataire invalide' });
   if (!text) return res.status(400).json({ message: 'Message vide' });
@@ -134,6 +174,12 @@ export const sendMessage = async (req, res) => {
   try {
     const receiverDetails = await getUserDetails(receiver);
     if (!receiverDetails) return res.status(404).json({ message: 'Utilisateur introuvable' });
+
+    // Patients cannot send messages to other patients
+    const receiverRole = receiverDetails.role?.toLowerCase().trim();
+    if (senderRole === 'patient' && receiverRole === 'patient') {
+      return res.status(403).json({ message: 'Les patients ne peuvent pas se contacter entre eux' });
+    }
 
     const conversation = await getOrCreateConversation(senderId, receiver);
     const created = await Message.create({

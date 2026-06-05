@@ -14,7 +14,10 @@ export const AuthProvider = ({ children }) => {
     if (token && savedUser) {
       setUser(JSON.parse(savedUser));
       api.get('/auth/me')
-        .then(res => setUser(res.data.user))
+        .then(res => {
+          setUser(res.data.user);
+          localStorage.setItem('cabinet_user', JSON.stringify(res.data.user));
+        })
         .catch(() => {
           localStorage.removeItem('cabinet_token');
           localStorage.removeItem('cabinet_user');

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Search, Mail, LogOut, User, Settings, ChevronDown, X, Sparkles, Activity } from 'lucide-react';
+import { Bell, Search, Mail, LogOut, User, Settings, ChevronDown, X, Sparkles, Activity, Menu } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useTranslation } from 'react-i18next';
@@ -29,13 +29,13 @@ const NotificationsDropdown = ({ onClose }) => {
   }, []);
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 10, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 10, scale: 0.95 }}
-      className="absolute end-0 top-16 w-96 bg-white/80 backdrop-blur-2xl rounded-3xl shadow-glow border border-white/50 z-50 overflow-hidden"
+      className="absolute end-0 top-16 w-[calc(100vw-2rem)] sm:w-96 max-w-sm bg-white/80 backdrop-blur-2xl rounded-3xl shadow-glow border border-white/50 z-50 overflow-hidden"
     >
-      <div className="flex items-center justify-between px-6 py-4 border-b border-white/30 bg-gradient-to-r from-purple/5 to-transparent">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-white/30 bg-gradient-to-r from-purple/5 to-transparent">
         <h3 className="font-black text-slate-800 text-base tracking-tight flex items-center gap-2">
           <Bell size={16} className="text-purple" /> {t('nav.notifications')}
         </h3>
@@ -43,26 +43,26 @@ const NotificationsDropdown = ({ onClose }) => {
           <X size={18} className="text-slate-400" />
         </button>
       </div>
-      <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+      <div className="max-h-[60vh] overflow-y-auto custom-scrollbar">
         {loading ? (
-          <div className="p-12 flex flex-col items-center justify-center gap-4">
-             <div className="w-10 h-10 border-4 border-purple/20 border-t-purple rounded-full animate-spin" />
-             <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t('nav.loading')}</p>
+          <div className="p-10 flex flex-col items-center justify-center gap-4">
+            <div className="w-10 h-10 border-4 border-purple/20 border-t-purple rounded-full animate-spin" />
+            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t('nav.loading')}</p>
           </div>
         ) : notifications.length === 0 ? (
-          <div className="p-12 text-center">
+          <div className="p-10 text-center">
             <div className="w-16 h-16 bg-purple/5 rounded-2xl flex items-center justify-center mx-auto mb-4 text-purple/30">
-               <Bell size={32} />
+              <Bell size={32} />
             </div>
             <p className="text-sm font-bold text-slate-400">{t('nav.no_notifs')}</p>
           </div>
         ) : (
           <div className="divide-y divide-slate-100/50">
             {notifications.map((n) => (
-              <div key={n._id} className={`px-6 py-4 hover:bg-purple/5 transition-all cursor-pointer group ${!n.isRead ? 'bg-purple/5' : ''}`}>
+              <div key={n._id} className={`px-5 py-4 hover:bg-purple/5 transition-all cursor-pointer group ${!n.isRead ? 'bg-purple/5' : ''}`}>
                 <div className="flex items-start gap-3">
                   <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${!n.isRead ? 'bg-purple shadow-glow' : 'bg-slate-200'}`} />
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-bold text-slate-800 group-hover:text-purple transition-colors">{n.title}</p>
                     <p className="text-xs font-medium text-slate-500 mt-1 leading-relaxed">{n.message}</p>
                   </div>
@@ -72,7 +72,7 @@ const NotificationsDropdown = ({ onClose }) => {
           </div>
         )}
       </div>
-      <div className="px-6 py-4 border-t border-white/30 bg-slate-50/50 text-center">
+      <div className="px-5 py-4 border-t border-white/30 bg-slate-50/50 text-center">
         <button className="text-xs font-black text-purple uppercase tracking-widest hover:text-purple/70 transition-colors">
           {t('nav.view_all')}
         </button>
@@ -103,13 +103,13 @@ const MessagesDropdown = ({ onClose }) => {
   }, []);
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 10, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 10, scale: 0.95 }}
-      className="absolute end-0 top-16 w-96 bg-white/80 backdrop-blur-2xl rounded-3xl shadow-glow border border-white/50 z-50 overflow-hidden"
+      className="absolute end-0 top-16 w-[calc(100vw-2rem)] sm:w-96 max-w-sm bg-white/80 backdrop-blur-2xl rounded-3xl shadow-glow border border-white/50 z-50 overflow-hidden"
     >
-      <div className="flex items-center justify-between px-6 py-4 border-b border-white/30 bg-gradient-to-r from-emerald/5 to-transparent">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-white/30 bg-gradient-to-r from-emerald/5 to-transparent">
         <h3 className="font-black text-slate-800 text-base tracking-tight flex items-center gap-2">
           <Mail size={16} className="text-emerald" /> {t('nav.recent_messages')}
         </h3>
@@ -117,15 +117,15 @@ const MessagesDropdown = ({ onClose }) => {
           <X size={18} className="text-slate-400" />
         </button>
       </div>
-      <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+      <div className="max-h-[60vh] overflow-y-auto custom-scrollbar">
         {loading ? (
-          <div className="p-12 flex flex-col items-center justify-center gap-4">
-             <div className="w-10 h-10 border-4 border-emerald/20 border-t-emerald rounded-full animate-spin" />
+          <div className="p-10 flex flex-col items-center justify-center gap-4">
+            <div className="w-10 h-10 border-4 border-emerald/20 border-t-emerald rounded-full animate-spin" />
           </div>
         ) : conversations.length === 0 ? (
-          <div className="p-12 text-center">
+          <div className="p-10 text-center">
             <div className="w-16 h-16 bg-emerald/5 rounded-2xl flex items-center justify-center mx-auto mb-4 text-emerald/30">
-               <Mail size={32} />
+              <Mail size={32} />
             </div>
             <p className="text-sm font-bold text-slate-400">{t('nav.no_messages')}</p>
           </div>
@@ -135,30 +135,34 @@ const MessagesDropdown = ({ onClose }) => {
               <button
                 key={conv.id}
                 onClick={() => { navigate('/chat', { state: { contactId: conv.other_user.id } }); onClose(); }}
-                className="w-full px-6 py-4 hover:bg-emerald/5 border-b border-slate-50 flex items-center gap-4 text-left transition-all group"
+                className="w-full px-5 py-4 hover:bg-emerald/5 border-b border-slate-50 flex items-center gap-3 text-left transition-all group"
               >
-                <div className="w-12 h-12 bg-gradient-to-br from-emerald to-mint rounded-2xl flex items-center justify-center text-indigo font-black text-xs overflow-hidden shrink-0 group-hover:scale-110 transition-transform duration-300">
+                <div className="w-11 h-11 bg-gradient-to-br from-emerald to-mint rounded-2xl flex items-center justify-center text-indigo font-black text-xs overflow-hidden shrink-0 group-hover:scale-110 transition-transform duration-300">
                   {conv.other_user.photo_url ? (
                     <img src={conv.other_user.photo_url} alt="" className="w-full h-full object-cover" />
                   ) : conv.other_user.prenom.charAt(0)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center mb-0.5">
-                    <p className="text-sm font-black text-slate-800 truncate leading-none group-hover:text-emerald transition-colors">{conv.other_user.prenom} {conv.other_user.nom}</p>
-                    <span className="text-[10px] font-bold text-slate-400 shrink-0 uppercase tracking-tighter">{new Date(conv.updatedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    <p className="text-sm font-black text-slate-800 truncate leading-none group-hover:text-emerald transition-colors">
+                      {conv.other_user.prenom} {conv.other_user.nom}
+                    </p>
+                    <span className="text-[10px] font-bold text-slate-400 shrink-0 uppercase tracking-tighter ms-2">
+                      {new Date(conv.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </div>
                   <p className="text-xs font-medium text-slate-500 truncate leading-relaxed">{conv.lastMessage?.text}</p>
                 </div>
                 {conv.unread_count > 0 && (
-                  <div className="w-2.5 h-2.5 bg-emerald rounded-full shrink-0 shadow-glow-emerald ring-4 ring-emerald/10 animate-pulse"></div>
+                  <div className="w-2.5 h-2.5 bg-emerald rounded-full shrink-0 shadow-glow-emerald ring-4 ring-emerald/10 animate-pulse" />
                 )}
               </button>
             ))}
           </div>
         )}
       </div>
-      <div className="px-6 py-4 border-t border-white/30 bg-slate-50/50 text-center">
-        <button 
+      <div className="px-5 py-4 border-t border-white/30 bg-slate-50/50 text-center">
+        <button
           onClick={() => { navigate('/chat'); onClose(); }}
           className="text-xs font-black text-emerald uppercase tracking-widest hover:text-emerald/70 transition-colors"
         >
@@ -175,16 +179,20 @@ const ProfileDropdown = ({ user, onClose, onLogout }) => {
   const { t } = useTranslation();
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 10, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 10, scale: 0.95 }}
       className="absolute end-0 top-16 w-72 bg-white/80 backdrop-blur-2xl rounded-3xl shadow-glow border border-white/50 z-50 overflow-hidden"
     >
-      <div className="p-6 bg-gradient-to-br from-purple/10 via-coral/5 to-transparent border-b border-white/30">
+      <div className="p-5 bg-gradient-to-br from-purple/10 via-coral/5 to-transparent border-b border-white/30">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-gradient-to-tr from-coral to-gold rounded-2xl flex items-center justify-center font-black text-white text-xl shadow-glow">
-            {user?.prenom?.charAt(0)}{user?.nom?.charAt(0)}
+          <div className="w-12 h-12 bg-gradient-to-tr from-coral to-gold rounded-2xl flex items-center justify-center font-black text-white text-lg shadow-glow overflow-hidden flex-shrink-0">
+            {user?.photo_url ? (
+              <img src={user.photo_url} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span>{user?.prenom?.charAt(0)}{user?.nom?.charAt(0)}</span>
+            )}
           </div>
           <div className="min-w-0">
             <p className="font-black text-slate-800 text-base truncate leading-none mb-1">
@@ -192,10 +200,10 @@ const ProfileDropdown = ({ user, onClose, onLogout }) => {
             </p>
             <p className="text-[11px] font-bold text-slate-400 truncate uppercase tracking-wider">{user?.email}</p>
             <div className="flex items-center gap-1.5 mt-2">
-               <div className="w-1.5 h-1.5 bg-emerald rounded-full shadow-glow-emerald" />
-               <span className="text-[10px] font-black text-purple uppercase tracking-widest">
-                 {t(`roles.${user?.role}`)}
-               </span>
+              <div className="w-1.5 h-1.5 bg-emerald rounded-full shadow-glow-emerald" />
+              <span className="text-[10px] font-black text-purple uppercase tracking-widest">
+                {t(`roles.${user?.role}`)}
+              </span>
             </div>
           </div>
         </div>
@@ -232,7 +240,7 @@ const ProfileDropdown = ({ user, onClose, onLogout }) => {
 };
 
 // ─── Navbar Principale ────────────────────────────────────────────────────────
-const Navbar = () => {
+const Navbar = ({ onMenuToggle, isMobileMenuOpen }) => {
   const { user, logout } = useAuth();
   const socket = useSocket();
   const navigate = useNavigate();
@@ -244,6 +252,7 @@ const Navbar = () => {
   const [showProfile,  setShowProfile]  = useState(false);
   const [notifCount,   setNotifCount]   = useState(0);
   const [msgCount,     setMsgCount]     = useState(0);
+  const [showSearch,   setShowSearch]   = useState(false);
 
   useEffect(() => {
     const fetchCounts = async () => {
@@ -259,7 +268,7 @@ const Navbar = () => {
         console.error('Failed to fetch navbar counts');
       }
     };
-    
+
     if (user) {
       fetchCounts();
     }
@@ -267,14 +276,9 @@ const Navbar = () => {
 
   useEffect(() => {
     if (socket) {
-      const handleNotification = () => {
-        setNotifCount(prev => prev + 1);
-      };
-
+      const handleNotification = () => setNotifCount(prev => prev + 1);
       const handleMessage = () => {
-        if (location.pathname !== '/chat') {
-          setMsgCount(prev => prev + 1);
-        }
+        if (location.pathname !== '/chat') setMsgCount(prev => prev + 1);
       };
 
       socket.on('new_notification', handleNotification);
@@ -311,7 +315,7 @@ const Navbar = () => {
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
-      className={`p-3 rounded-2xl transition-all duration-300 relative group ${
+      className={`p-2.5 sm:p-3 rounded-2xl transition-all duration-300 relative group ${
         active
           ? `bg-gradient-to-br from-${color} to-${color}/70 text-white shadow-lg`
           : 'text-slate-500 hover:bg-white/50 hover:text-slate-800 hover:shadow-glass'
@@ -319,7 +323,7 @@ const Navbar = () => {
     >
       {children}
       {count > 0 && (
-        <span className={`absolute -top-1 -end-1 w-5 h-5 bg-coral text-white text-[10px] font-black rounded-full flex items-center justify-center ring-2 ring-white shadow-sm`}>
+        <span className="absolute -top-1 -end-1 w-5 h-5 bg-coral text-white text-[10px] font-black rounded-full flex items-center justify-center ring-2 ring-white shadow-sm">
           {count}
         </span>
       )}
@@ -327,27 +331,83 @@ const Navbar = () => {
   );
 
   return (
-    <header className="h-20 bg-white/60 backdrop-blur-xl border-b border-white/30 flex items-center justify-between px-8 sticky top-0 z-40 shadow-glass">
-      {/* Search Bar */}
-      <div className="flex items-center gap-4 bg-white/40 backdrop-blur-md px-5 py-3 rounded-2xl w-full max-w-md border border-white/50 transition-all duration-300 focus-within:bg-white/80 focus-within:ring-4 focus-within:ring-purple/15 focus-within:border-purple/30 focus-within:shadow-glass group">
-        <Search size={18} className="text-slate-400 group-focus-within:text-purple transition-colors flex-shrink-0" strokeWidth={2.5} />
-        <input
-          type="text"
-          placeholder={t('nav.search')}
-          className="bg-transparent border-none outline-none text-sm font-bold w-full placeholder:text-slate-400 placeholder:font-medium text-slate-700"
-        />
-        <div className="hidden sm:flex items-center gap-1 px-2 py-0.5 bg-slate-100/80 rounded-lg text-[10px] font-black text-slate-400 uppercase tracking-widest border border-slate-200/50 flex-shrink-0">
-           ⌘ K
+    <header className="h-16 sm:h-20 bg-white/60 backdrop-blur-xl border-b border-white/30 flex items-center justify-between px-4 sm:px-6 lg:px-8 sticky top-0 z-40 shadow-glass gap-3">
+
+      {/* Left: Hamburger (mobile) + Search */}
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        {/* Hamburger — only on mobile/tablet */}
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={onMenuToggle}
+          className="lg:hidden p-2.5 rounded-2xl text-slate-500 hover:bg-white/50 hover:text-slate-800 transition-all flex-shrink-0"
+          aria-label="Toggle menu"
+        >
+          <motion.div
+            animate={{ rotate: isMobileMenuOpen ? 90 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {isMobileMenuOpen ? <X size={22} strokeWidth={2.5} /> : <Menu size={22} strokeWidth={2.5} />}
+          </motion.div>
+        </motion.button>
+
+        {/* Full search bar — md and up */}
+        <div className="hidden md:flex items-center gap-3 bg-white/40 backdrop-blur-md px-4 py-2.5 rounded-2xl flex-1 max-w-md border border-white/50 transition-all duration-300 focus-within:bg-white/80 focus-within:ring-4 focus-within:ring-purple/15 focus-within:border-purple/30 focus-within:shadow-glass group">
+          <Search size={17} className="text-slate-400 group-focus-within:text-purple transition-colors flex-shrink-0" strokeWidth={2.5} />
+          <input
+            type="text"
+            placeholder={t('nav.search')}
+            className="bg-transparent border-none outline-none text-sm font-bold w-full placeholder:text-slate-400 placeholder:font-medium text-slate-700"
+          />
+          <div className="hidden sm:flex items-center gap-1 px-2 py-0.5 bg-slate-100/80 rounded-lg text-[10px] font-black text-slate-400 uppercase tracking-widest border border-slate-200/50 flex-shrink-0">
+            ⌘ K
+          </div>
         </div>
+
+        {/* Compact search icon — below md */}
+        <AnimatePresence>
+          {showSearch ? (
+            <motion.div
+              key="search-input"
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: '100%', opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              className="md:hidden flex items-center gap-2 bg-white/80 backdrop-blur-md px-3 py-2 rounded-2xl border border-purple/30 ring-4 ring-purple/10"
+            >
+              <Search size={16} className="text-purple flex-shrink-0" />
+              <input
+                autoFocus
+                type="text"
+                placeholder={t('nav.search')}
+                className="bg-transparent border-none outline-none text-sm font-bold w-full placeholder:text-slate-400 text-slate-700"
+              />
+              <button onClick={() => setShowSearch(false)} className="flex-shrink-0">
+                <X size={16} className="text-slate-400" />
+              </button>
+            </motion.div>
+          ) : (
+            <motion.button
+              key="search-btn"
+              onClick={() => setShowSearch(true)}
+              className="md:hidden p-2.5 rounded-2xl text-slate-500 hover:bg-white/50 hover:text-slate-800 transition-all"
+            >
+              <Search size={20} strokeWidth={2.5} />
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Right Actions */}
-      <div className="flex items-center gap-2" ref={navRef}>
-        
+      <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0" ref={navRef}>
+
         {/* Messages */}
         <div className="relative">
-          <NavIconButton onClick={() => { setShowMessages(!showMessages); setShowNotifs(false); setShowProfile(false); }} active={showMessages} count={msgCount} color="emerald">
-            <Mail size={22} strokeWidth={showMessages ? 2.5 : 2} />
+          <NavIconButton
+            onClick={() => { setShowMessages(!showMessages); setShowNotifs(false); setShowProfile(false); }}
+            active={showMessages}
+            count={msgCount}
+            color="emerald"
+          >
+            <Mail size={20} strokeWidth={showMessages ? 2.5 : 2} />
           </NavIconButton>
           <AnimatePresence>
             {showMessages && <MessagesDropdown onClose={() => setShowMessages(false)} />}
@@ -356,56 +416,67 @@ const Navbar = () => {
 
         {/* Notifications */}
         <div className="relative">
-          <NavIconButton onClick={() => { setShowNotifs(!showNotifs); setShowMessages(false); setShowProfile(false); }} active={showNotifs} count={notifCount} color="purple">
-            <Bell size={22} strokeWidth={showNotifs ? 2.5 : 2} />
+          <NavIconButton
+            onClick={() => { setShowNotifs(!showNotifs); setShowMessages(false); setShowProfile(false); }}
+            active={showNotifs}
+            count={notifCount}
+            color="purple"
+          >
+            <Bell size={20} strokeWidth={showNotifs ? 2.5 : 2} />
           </NavIconButton>
           <AnimatePresence>
             {showNotifs && <NotificationsDropdown onClose={() => setShowNotifs(false)} />}
           </AnimatePresence>
         </div>
 
-        <div className="w-[1px] h-8 bg-slate-200/50 mx-2 hidden md:block" />
+        <div className="w-[1px] h-7 bg-slate-200/50 mx-1 hidden md:block" />
 
-        {/* Language & Profile */}
-        <div className="flex items-center gap-2">
+        {/* Language + Profile */}
+        <div className="flex items-center gap-1 sm:gap-2">
           <div className="hidden sm:block">
             <LanguageSwitcher />
           </div>
-          
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            onClick={() => { setShowProfile(!showProfile); setShowNotifs(false); setShowMessages(false); }}
-            className={`flex items-center gap-3 p-1.5 pe-4 rounded-2xl transition-all duration-300 group ${
-              showProfile ? 'bg-purple/10 ring-4 ring-purple/10 border border-purple/20' : 'bg-white/30 hover:bg-white/60 border border-white/50 hover:border-white/80 hover:shadow-glass'
-            }`}
-          >
-            <div className="w-10 h-10 bg-gradient-to-tr from-coral to-gold rounded-xl flex items-center justify-center font-black text-white text-sm shadow-glow transition-transform duration-300 group-hover:scale-110">
-              {user?.prenom?.charAt(0)}{user?.nom?.charAt(0)}
-            </div>
-            <div className="hidden lg:block text-left">
-              <p className="text-sm font-black text-slate-800 leading-none mb-1 flex items-center gap-2">
-                {user?.prenom} {user?.nom}
-                <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${showProfile ? 'rotate-180' : ''}`} />
-              </p>
-              <div className="flex items-center gap-1.5">
-                 <motion.div animate={{ scale: [1, 1.2, 1], opacity: [1, 0.5, 1] }} transition={{ repeat: Infinity, duration: 2 }} className="w-1.5 h-1.5 rounded-full bg-emerald" />
-                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                   {t(`roles.${user?.role}`)}
-                 </span>
-              </div>
-            </div>
-          </motion.button>
-        </div>
 
-        <AnimatePresence>
-          {showProfile && (
-            <ProfileDropdown
-              user={user}
-              onClose={() => setShowProfile(false)}
-              onLogout={handleLogout}
-            />
-          )}
-        </AnimatePresence>
+          <div className="relative">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              onClick={() => { setShowProfile(!showProfile); setShowNotifs(false); setShowMessages(false); }}
+              className={`flex items-center gap-2 p-1.5 sm:pe-3 rounded-2xl transition-all duration-300 group ${
+                showProfile ? 'bg-purple/10 ring-4 ring-purple/10 border border-purple/20' : 'bg-white/30 hover:bg-white/60 border border-white/50 hover:border-white/80 hover:shadow-glass'
+              }`}
+            >
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-tr from-coral to-gold rounded-xl flex items-center justify-center font-black text-white text-sm shadow-glow transition-transform duration-300 group-hover:scale-110 overflow-hidden flex-shrink-0">
+                {user?.photo_url ? (
+                  <img src={user.photo_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span>{user?.prenom?.charAt(0)}{user?.nom?.charAt(0)}</span>
+                )}
+              </div>
+              <div className="hidden lg:block text-left">
+                <p className="text-sm font-black text-slate-800 leading-none mb-1 flex items-center gap-2">
+                  {user?.prenom} {user?.nom}
+                  <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${showProfile ? 'rotate-180' : ''}`} />
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <motion.div animate={{ scale: [1, 1.2, 1], opacity: [1, 0.5, 1] }} transition={{ repeat: Infinity, duration: 2 }} className="w-1.5 h-1.5 rounded-full bg-emerald" />
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    {t(`roles.${user?.role}`)}
+                  </span>
+                </div>
+              </div>
+            </motion.button>
+
+            <AnimatePresence>
+              {showProfile && (
+                <ProfileDropdown
+                  user={user}
+                  onClose={() => setShowProfile(false)}
+                  onLogout={handleLogout}
+                />
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
       </div>
     </header>
   );

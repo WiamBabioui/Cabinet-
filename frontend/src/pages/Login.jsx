@@ -51,14 +51,14 @@ const Login = () => {
             animate={{ rotate: [0, 15, -10, 0] }}
             transition={{ duration: 2, repeat: Infinity, repeatDelay: 4 }}
           >
-            <Sparkles size={16} className="text-gold" />
+            <Sparkles size={16} className="text-purple" />
           </motion.div>
-          <span className="text-xs font-black text-purple uppercase tracking-[0.2em]">Bienvenue</span>
+          <span className="text-xs font-black text-purple uppercase tracking-[0.2em]">PORTAIL SECURISE &bull; SECURE PORTAL</span>
         </div>
         <h2 className="text-4xl font-black text-slate-800 tracking-tight mb-3 leading-tight">
           {t('auth.login.title')}
         </h2>
-        <p className="text-slate-500 text-base font-medium">
+        <p className="text-slate-500 text-base font-medium leading-relaxed">
           {t('auth.login.subtitle')}
         </p>
       </div>
@@ -81,7 +81,6 @@ const Login = () => {
         <Input
           id="login-email"
           label={t('auth.login.email_label')}
-          placeholder={t('auth.login.email_placeholder')}
           icon={Mail}
           type="email"
           value={email}
@@ -94,7 +93,6 @@ const Login = () => {
           <Input
             id="login-password"
             label={t('auth.login.password_label')}
-            placeholder="********"
             icon={Lock}
             type={showPassword ? "text" : "password"}
             value={password}
@@ -106,7 +104,7 @@ const Login = () => {
             type="button"
             whileTap={{ scale: 0.9 }}
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-4 top-[42px] text-slate-400 hover:text-purple transition-colors p-1 z-10"
+            className="absolute right-4 top-[22px] text-slate-400 hover:text-purple transition-colors p-1 z-10"
           >
             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </motion.button>
@@ -134,7 +132,7 @@ const Login = () => {
         <div className="pt-2">
           <Button 
             type="submit" 
-            className="w-full h-14" 
+            className="w-full h-14 uppercase tracking-widest font-black text-xs" 
             size="lg"
             isLoading={loading} 
             icon={ArrowRight}

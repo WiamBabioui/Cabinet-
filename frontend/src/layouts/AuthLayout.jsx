@@ -19,14 +19,14 @@ const AuthLayout = () => {
   const isRtl = i18n.language === 'ar';
 
   const features = [
-    { icon: ShieldCheck, label: t('auth.layout.secure_access') || 'Acces Securise', color: 'text-emerald' },
-    { icon: Sparkles, label: t('auth.layout.modern_ui') || 'Interface Moderne', color: 'text-gold' },
-    { icon: Activity, label: 'Multi-specialites', color: 'text-coral' },
-    { icon: Zap, label: 'Temps Reel', color: 'text-mint' },
+    { icon: Activity, label: t('auth.layout.feat_ehr'), color: 'text-coral' },
+    { icon: Zap, label: t('auth.layout.feat_sync'), color: 'text-mint' },
+    
+    { icon: HeartPulse, label: t('auth.layout.feat_continuity'), color: 'text-purple' },
   ];
 
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 lg:p-8 relative overflow-hidden font-sans bg-[#0f1123]`} dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className={`min-h-screen flex items-center justify-center p-4 lg:p-10 relative overflow-hidden font-sans bg-[#0f1123]`} dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Mesh gradient background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <Orb delay={0} className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-purple/20 rounded-full blur-[100px]" />
@@ -106,8 +106,8 @@ const AuthLayout = () => {
               &ldquo;{t('auth.layout.quote')}&rdquo;
             </p>
             <div className="flex items-center gap-4">
-              <div className="w-11 h-11 bg-gradient-to-tr from-coral to-gold rounded-2xl flex items-center justify-center text-white font-bold shadow-glow flex-shrink-0">
-                DR
+              <div className="w-11 h-11 bg-purple/10 border border-purple/20 rounded-2xl flex items-center justify-center text-purple font-black shadow-glow flex-shrink-0">
+                YA
               </div>
               <div>
                 <h4 className="text-white font-black text-sm">{t('auth.layout.quote_author')}</h4>
@@ -133,8 +133,8 @@ const AuthLayout = () => {
       </motion.div>
 
       {/* Footer */}
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-slate-600 text-xs font-medium tracking-wider uppercase z-20">
-        &copy; 2024 Cabinet+ &bull; {t('common.all_rights_reserved') || 'Tous droits reserves'}
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-slate-500 text-[10px] font-black tracking-widest uppercase z-20 text-center w-full">
+        &copy; 2026 Cabinet+ &bull; Technologie Médicale Marocaine &bull; {t('common.all_rights_reserved') || 'Tous droits réservés'}
       </div>
     </div>
   );

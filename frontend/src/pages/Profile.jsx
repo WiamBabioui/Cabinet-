@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   User, Mail, Phone, Lock, Save, Clock, 
   DollarSign, Loader2, Sparkles, Activity, 
@@ -18,12 +18,15 @@ import { twMerge } from 'tailwind-merge';
 const Profile = () => {
   const { user, updateUser } = useAuth();
   const { t, i18n } = useTranslation();
+  const fileInputRef = useRef(null);
   
   const [activeTab, setTab] = useState('profil');
   const [loading, setLoading]   = useState(false);
   const [saving, setSaving]     = useState(false);
   const [success, setSuccess]   = useState('');
   const [error, setError]       = useState('');
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [localPhotoUrl, setLocalPhotoUrl]   = useState(null);
 
   const JOURS = t('profile.days', { returnObjects: true });
 
@@ -135,6 +138,34 @@ const Profile = () => {
     finally { setSaving(false); }
   };
 
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Preview immediately
+    const objectUrl = URL.createObjectURL(file);
+    setLocalPhotoUrl(objectUrl);
+    setPhotoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('avatar', file);
+      const res = await api.post('/upload/avatar', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      const serverUrl = res.data.photo_url;
+      setLocalPhotoUrl(serverUrl);
+      updateUser?.({ photo_url: serverUrl });
+      setSuccess('Photo de profil mise à jour !');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Erreur lors du téléchargement');
+      setLocalPhotoUrl(null);
+    } finally {
+      setPhotoUploading(false);
+      // reset input so same file can be re-selected
+      e.target.value = '';
+    }
+  };
+
   const toggleJour = (i) => {
     setHoraires(h => h.map((j, idx) => idx === i ? { ...j, actif: !j.actif } : j));
   };
@@ -181,11 +212,40 @@ const Profile = () => {
               <div className="absolute inset-0 bg-gradient-to-br from-purple/[0.02] to-indigo/[0.02] pointer-events-none" />
               <div className="relative z-10 flex flex-col items-center text-center">
                  <div className="relative mb-6">
-                    <div className="w-32 h-32 bg-gradient-to-tr from-purple to-indigo rounded-[3rem] shadow-glow flex items-center justify-center text-white text-4xl font-black border-4 border-white">
-                       {user?.prenom?.charAt(0)}{user?.nom?.charAt(0)}
+                    {/* Avatar display: real photo or initials */}
+                    <div className="w-32 h-32 bg-gradient-to-tr from-purple to-indigo rounded-[3rem] shadow-glow overflow-hidden border-4 border-white flex items-center justify-center">
+                      {(localPhotoUrl || user?.photo_url) ? (
+                        <img
+                          src={localPhotoUrl || user.photo_url}
+                          alt="Photo de profil"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-white text-4xl font-black">
+                          {user?.prenom?.charAt(0)}{user?.nom?.charAt(0)}
+                        </span>
+                      )}
                     </div>
-                    <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="absolute -bottom-2 -right-2 w-11 h-11 bg-white rounded-2xl shadow-premium border border-slate-100 flex items-center justify-center text-purple transition-all hover:text-indigo">
-                       <Camera size={20} strokeWidth={2.5} />
+                    {/* Hidden file input */}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="hidden"
+                      onChange={handlePhotoUpload}
+                    />
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={photoUploading}
+                      className="absolute -bottom-2 -right-2 w-11 h-11 bg-white rounded-2xl shadow-premium border border-slate-100 flex items-center justify-center text-purple transition-all hover:text-indigo disabled:opacity-50"
+                    >
+                      {photoUploading ? (
+                        <Loader2 size={18} className="animate-spin" />
+                      ) : (
+                        <Camera size={20} strokeWidth={2.5} />
+                      )}
                     </motion.button>
                  </div>
                  <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-none mb-2">{user?.prenom} {user?.nom}</h2>

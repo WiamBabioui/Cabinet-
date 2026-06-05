@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
+import { fileURLToPath } from 'url';
+import path from 'path';
 import { initSocket } from './config/socket.js';
 import connectMongo from './config/db.mongo.js';
 import { socketAuth } from './middleware/auth.middleware.js';
@@ -16,8 +18,13 @@ import chatRoutes from './routes/chat.routes.js';
 import consultationRoutes from './routes/consultation.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import activityLogRoutes from './routes/activitylog.routes.js';
+import uploadRoutes from './routes/upload.routes.js';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
+
 
 const app = express();
 const httpServer = createServer(app);
@@ -38,6 +45,9 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve uploaded files as static assets
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/patients', patientRoutes);
@@ -48,6 +58,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/consultations', consultationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/activitylogs', activityLogRoutes);
+app.use('/api/upload', uploadRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Cabinet+ API fonctionne !' });
@@ -95,4 +106,4 @@ httpServer.listen(PORT, () => {
   console.log(`Serveur lance sur http://localhost:${PORT}`);
 });
 
-// Database connection verified and watch reloaded
+// Database connection verified and watch reloaded.

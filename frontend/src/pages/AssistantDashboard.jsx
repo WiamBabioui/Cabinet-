@@ -16,6 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 // Animated counter hook
 const useCounter = (target, duration = 1500) => {
@@ -81,6 +82,7 @@ const KpiCard = ({ kpi, idx }) => {
 const AssistantDashboard = () => {
   const { user } = useAuth();
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const [stats, setStats]   = useState(null);
   const [rdv, setRdv]       = useState([]);
   const [loading, setLoading] = useState(true);
@@ -209,8 +211,8 @@ const AssistantDashboard = () => {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" icon={Calendar}>Calendrier</Button>
-          <Button icon={Plus}>{t('dashboard.new_appointment')}</Button>
+          <Button variant="outline" icon={Calendar} onClick={() => navigate('/appointments')}>Calendrier</Button>
+          <Button icon={Plus} onClick={() => navigate('/appointments')}>{t('dashboard.new_appointment')}</Button>
         </div>
       </motion.div>
 

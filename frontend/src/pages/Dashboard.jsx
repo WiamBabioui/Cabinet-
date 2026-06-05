@@ -188,11 +188,11 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-6 sm:space-y-8 pb-10">
       {/* Welcome Header */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-        className="flex flex-col md:flex-row md:items-center justify-between gap-6"
+        className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6"
       >
         <div>
           <div className="flex items-center gap-2 mb-2">
@@ -201,21 +201,21 @@ const Dashboard = () => {
             </motion.div>
             <span className="text-xs font-black text-purple uppercase tracking-[0.2em]">Vue d'ensemble</span>
           </div>
-          <h1 className="text-4xl font-black text-slate-800 tracking-tight leading-none">
+          <h1 className="text-2xl sm:text-4xl font-black text-slate-800 tracking-tight leading-none">
             {t('dashboard.overview')}
           </h1>
-          <p className="text-slate-500 mt-3 font-medium text-lg">
+          <p className="text-slate-500 mt-2 sm:mt-3 font-medium text-base sm:text-lg">
             {t('dashboard.welcome', { name: user?.prenom })}
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" icon={Calendar}>Calendrier</Button>
+          <Button variant="outline" icon={Calendar} className="hidden sm:flex">Calendrier</Button>
           <Button icon={Plus}>{t('dashboard.new_appointment')}</Button>
         </div>
       </motion.div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
         {kpis.map((kpi, idx) => (
           <KpiCard key={kpi.title} kpi={kpi} idx={idx} />
         ))}
@@ -353,83 +353,122 @@ const Dashboard = () => {
 
       {/* Appointments Table */}
       <Card className="rounded-3xl overflow-hidden p-0">
-        <div className="p-8 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="p-5 sm:p-8 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h3 className="text-2xl font-black text-slate-800 tracking-tight">{t('dashboard.appointments_today')}</h3>
+            <h3 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">{t('dashboard.appointments_today')}</h3>
             <p className="text-sm font-medium text-slate-400">{t('dashboard.appointments_today_subtitle')}</p>
           </div>
           <div className="flex gap-2">
-             <Button variant="ghost" size="sm" className="font-black uppercase tracking-widest text-[10px]">Tout voir</Button>
+            <Button variant="ghost" size="sm" className="font-black uppercase tracking-widest text-[10px]">Tout voir</Button>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          {rdv.length === 0 ? (
-            <div className="text-center py-20 bg-gradient-to-b from-transparent to-slate-50/30">
-              <div className="w-20 h-20 bg-gradient-to-br from-purple/10 to-emerald/10 rounded-3xl flex items-center justify-center mx-auto mb-4 text-slate-300 border border-purple/10">
-                <Calendar size={36} />
-              </div>
-              <p className="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">{t('dashboard.no_appointments')}</p>
+        {rdv.length === 0 ? (
+          <div className="text-center py-16 sm:py-20 bg-gradient-to-b from-transparent to-slate-50/30">
+            <div className="w-20 h-20 bg-gradient-to-br from-purple/10 to-emerald/10 rounded-3xl flex items-center justify-center mx-auto mb-4 text-slate-300 border border-purple/10">
+              <Calendar size={36} />
             </div>
-          ) : (
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gradient-to-r from-slate-50/80 to-transparent text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] border-y border-slate-100/50">
-                  <th className="px-8 py-5 text-left">{t('dashboard.table.patient')}</th>
-                  <th className="px-8 py-5 text-left">{t('dashboard.table.time')}</th>
-                  <th className="px-8 py-5 text-left">{t('dashboard.table.reason')}</th>
-                  <th className="px-8 py-5 text-left">{t('dashboard.table.status')}</th>
-                  <th className="px-8 py-5 text-right">{t('dashboard.table.action')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100/50">
-                {rdv.map((r, idx) => (
-                  <motion.tr 
-                    key={r.id} 
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.05 }}
-                    whileHover={{ backgroundColor: 'rgba(124,92,255,0.03)' }}
-                    className="transition-all group cursor-pointer"
-                  >
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-4">
-                        <div className="w-11 h-11 bg-gradient-to-br from-purple/20 to-emerald/20 rounded-2xl flex items-center justify-center font-black text-purple text-sm border border-purple/10 group-hover:scale-110 transition-transform duration-300">
-                          {r.patient_nom.charAt(0)}
+            <p className="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">{t('dashboard.no_appointments')}</p>
+          </div>
+        ) : (
+          <>
+            {/* Desktop table — hidden on mobile */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gradient-to-r from-slate-50/80 to-transparent text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] border-y border-slate-100/50">
+                    <th className="px-6 py-4 text-left">{t('dashboard.table.patient')}</th>
+                    <th className="px-6 py-4 text-left">{t('dashboard.table.time')}</th>
+                    <th className="px-6 py-4 text-left hidden md:table-cell">{t('dashboard.table.reason')}</th>
+                    <th className="px-6 py-4 text-left">{t('dashboard.table.status')}</th>
+                    <th className="px-6 py-4 text-right">{t('dashboard.table.action')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100/50">
+                  {rdv.map((r, idx) => (
+                    <motion.tr
+                      key={r.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      whileHover={{ backgroundColor: 'rgba(124,92,255,0.03)' }}
+                      className="transition-all group cursor-pointer"
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-purple/20 to-emerald/20 rounded-2xl flex items-center justify-center font-black text-purple text-sm border border-purple/10 group-hover:scale-110 transition-transform duration-300">
+                            {r.patient_nom.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-black text-slate-800 text-sm mb-0.5">{r.patient_nom}</p>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">{r.patient_telephone}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-black text-slate-800 text-sm mb-0.5">{r.patient_nom}</p>
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">{r.patient_telephone}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-8 py-5">
-                       <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100/50 rounded-xl w-fit border border-slate-200/50">
-                          <Clock size={14} className="text-slate-400" />
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100/50 rounded-xl w-fit border border-slate-200/50">
+                          <Clock size={13} className="text-slate-400" />
                           <span className="text-xs font-black text-slate-600">
                             {new Date(r.date_heure_debut).toLocaleTimeString(i18n.language === 'ar' ? 'ar-MA' : 'fr-MA', { hour: '2-digit', minute: '2-digit' })}
                           </span>
-                       </div>
-                    </td>
-                    <td className="px-8 py-5">
-                      <p className="text-sm font-bold text-slate-500 max-w-xs truncate">{r.motif}</p>
-                    </td>
-                    <td className="px-8 py-5">
-                      <Badge variant={statusBadge(r.statut)}>{r.statut}</Badge>
-                    </td>
-                    <td className="px-8 py-5 text-right">
-                      <motion.button whileHover={{ scale: 1.1 }} className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-purple hover:bg-purple/5 rounded-xl transition-all border border-transparent hover:border-purple/20">
-                        <MoreHorizontal size={20} />
-                      </motion.button>
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-        <div className="p-6 bg-gradient-to-r from-slate-50/50 to-transparent text-center border-t border-slate-100/50">
-           <button className="text-xs font-black text-purple uppercase tracking-[0.2em] hover:text-purple/70 transition-colors">Acceder a la liste complete des rendez-vous</button>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 hidden md:table-cell">
+                        <p className="text-sm font-bold text-slate-500 max-w-xs truncate">{r.motif}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge variant={statusBadge(r.statut)}>{r.statut}</Badge>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <motion.button whileHover={{ scale: 1.1 }} className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-purple hover:bg-purple/5 rounded-xl transition-all border border-transparent hover:border-purple/20">
+                          <MoreHorizontal size={20} />
+                        </motion.button>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards — visible only on mobile */}
+            <div className="sm:hidden divide-y divide-slate-100/50">
+              {rdv.map((r, idx) => (
+                <motion.div
+                  key={r.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="p-4 hover:bg-purple/[0.02] transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 bg-gradient-to-br from-purple/20 to-emerald/20 rounded-2xl flex items-center justify-center font-black text-purple text-sm border border-purple/10 flex-shrink-0">
+                      {r.patient_nom.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-slate-800 text-sm truncate">{r.patient_nom}</p>
+                      <p className="text-xs font-bold text-slate-400">{r.patient_telephone}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <Badge variant={statusBadge(r.statut)} className="text-[10px]">{r.statut}</Badge>
+                      <div className="flex items-center gap-1 px-2 py-0.5 bg-slate-100/50 rounded-lg border border-slate-200/50">
+                        <Clock size={11} className="text-slate-400" />
+                        <span className="text-[11px] font-black text-slate-600">
+                          {new Date(r.date_heure_debut).toLocaleTimeString(i18n.language === 'ar' ? 'ar-MA' : 'fr-MA', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  {r.motif && (
+                    <p className="text-xs font-medium text-slate-500 mt-2 truncate ms-14">{r.motif}</p>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          </>
+        )}
+
+        <div className="p-5 sm:p-6 bg-gradient-to-r from-slate-50/50 to-transparent text-center border-t border-slate-100/50">
+          <button className="text-xs font-black text-purple uppercase tracking-[0.2em] hover:text-purple/70 transition-colors">Acceder a la liste complete des rendez-vous</button>
         </div>
       </Card>
     </div>

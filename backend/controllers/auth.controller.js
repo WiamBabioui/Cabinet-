@@ -73,7 +73,7 @@ export const login = async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT id, uuid, email, mot_de_passe_hash, role, prenom, nom, actif,
-              tentatives_connexion, bloque_jusqu_au
+              tentatives_connexion, bloque_jusqu_au, photo_url
        FROM utilisateurs WHERE email = ? AND deleted_at IS NULL`,
       [email]
     );
@@ -132,6 +132,7 @@ export const login = async (req, res) => {
         nom: user.nom,
         email: user.email,
         role: user.role,
+        photo_url: user.photo_url,
       }
     });
 
