@@ -33,12 +33,6 @@ const AuthLayout = () => {
         <Orb delay={2} className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-emerald/15 rounded-full blur-[100px]" />
         <Orb delay={4} className="absolute top-[40%] left-[40%] w-[30%] h-[30%] bg-coral/10 rounded-full blur-[80px]" />
       </div>
-
-      {/* Language Switcher */}
-      <div className="absolute top-6 right-6 lg:top-8 lg:right-8 z-50">
-        <LanguageSwitcher variant="buttons" />
-      </div>
-
       <motion.div 
         initial={{ opacity: 0, y: 30, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -46,7 +40,7 @@ const AuthLayout = () => {
         className="w-full max-w-6xl relative z-10 flex rounded-[2.5rem] overflow-hidden min-h-[700px] shadow-[0_0_80px_rgba(124,92,255,0.2)]"
       >
         {/* Left Side: Branding */}
-        <div className={`hidden lg:flex flex-col justify-between flex-1 relative overflow-hidden p-16 bg-gradient-to-br from-indigo via-[#1a1f4a] to-[#0f1123] ${isRtl ? 'order-2' : 'order-1'}`}>
+        <div className={`hidden lg:flex flex-col justify-between gap-10 flex-1 relative overflow-hidden p-16 bg-gradient-to-br from-indigo via-[#1a1f4a] to-[#0f1123] ${isRtl ? 'order-2' : 'order-1'}`}>
           {/* Decorative inner orbs */}
           <div className="absolute top-0 right-0 w-80 h-80 bg-purple/20 rounded-full translate-x-1/2 -translate-y-1/3 blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-72 h-72 bg-emerald/15 rounded-full -translate-x-1/3 translate-y-1/3 blur-3xl pointer-events-none" />
@@ -118,8 +112,14 @@ const AuthLayout = () => {
         </div>
 
         {/* Right Side: Auth Form */}
-        <div className={`flex-1 p-8 lg:p-16 flex flex-col justify-center bg-white/95 backdrop-blur-xl ${isRtl ? 'order-1' : 'order-2'}`}>
-          <div className="w-full max-w-md mx-auto">
+        <div className={`flex-1 p-8 lg:p-16 flex flex-col bg-white/95 backdrop-blur-xl relative ${isRtl ? 'order-1' : 'order-2'}`}>
+          
+          {/* Language Switcher */}
+          <div className="flex justify-end mb-6 z-50">
+            <LanguageSwitcher variant="buttons" />
+          </div>
+          
+          <div className="w-full max-w-md mx-auto my-auto flex flex-col justify-center">
             {/* Mobile logo */}
             <div className="flex items-center gap-2.5 mb-10 lg:hidden">
               <div className="w-9 h-9 bg-gradient-to-br from-purple to-emerald rounded-xl flex items-center justify-center">
@@ -133,7 +133,7 @@ const AuthLayout = () => {
       </motion.div>
 
       {/* Footer */}
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-slate-500 text-[10px] font-black tracking-widest uppercase z-20 text-center w-full">
+      <div className="fixed bottom-6 left-1/2 right-0 text-center -translate-x-1/2 text-slate-500 text-[10px] font-black tracking-widest uppercase z-20 text-center w-full">
         &copy; 2026 Cabinet+ &bull; Technologie Médicale Marocaine &bull; {t('common.all_rights_reserved') || 'Tous droits réservés'}
       </div>
     </div>
