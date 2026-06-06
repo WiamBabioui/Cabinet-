@@ -284,7 +284,7 @@ export const updateDossierMedical = async (req, res) => {
 export const getPortalData = async (req, res) => {
   const { email } = req.user;
   try {
-    const [patients] = await pool.execute(
+    let [patients] = await pool.execute(
       `SELECT p.*, CONCAT(u.prenom, ' ', u.nom) as medecin_traitant
        FROM patients p
        LEFT JOIN medecins m ON m.id = p.medecin_traitant_id
@@ -292,6 +292,61 @@ export const getPortalData = async (req, res) => {
        WHERE p.email = ? AND p.deleted_at IS NULL`,
       [email]
     );
+
+    if (patients.length === 0) {
+      // Lazy-create patients profile + medical file if user is a registered patient in utilisateurs
+      const [userRows] = await pool.execute(
+        `SELECT id, prenom, nom, telephone, assigned_doctor_id FROM utilisateurs WHERE email = ? AND LOWER(role) = 'patient'`,
+        [email]
+      );
+
+      if (userRows.length > 0) {
+        const u = userRows[0];
+        let medecinTraitantId = null;
+        if (u.assigned_doctor_id) {
+          const [medecinRows] = await pool.execute(
+            `SELECT id FROM medecins WHERE utilisateur_id = ?`,
+            [u.assigned_doctor_id]
+          );
+          if (medecinRows.length > 0) {
+            medecinTraitantId = medecinRows[0].id;
+          }
+        }
+
+        const num_dossier = generateNumDossier();
+        const uuid = crypto.randomUUID();
+
+        const sql = `INSERT INTO patients
+            (uuid, num_dossier, prenom, nom, date_naissance, sexe, telephone, email, cin,
+             adresse_rue, adresse_ville, adresse_code_postal, adresse_pays,
+             groupe_sanguin, assurance_nom, assurance_numero,
+             medecin_traitant_id, notes_admin, statut)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+        const [result] = await pool.execute(sql, [
+          uuid, num_dossier, u.prenom, u.nom, null, 'M', u.telephone || null,
+          email, null, null, null, null, 'Maroc',
+          null, null, null, medecinTraitantId, null, 'actif'
+        ]);
+
+        const patientId = result.insertId;
+
+        await pool.execute(
+          'INSERT INTO dossiers_medicaux (patient_id) VALUES (?)',
+          [patientId]
+        );
+
+        const [reFetch] = await pool.execute(
+          `SELECT p.*, CONCAT(u.prenom, ' ', u.nom) as medecin_traitant
+           FROM patients p
+           LEFT JOIN medecins m ON m.id = p.medecin_traitant_id
+           LEFT JOIN utilisateurs u ON u.id = m.utilisateur_id
+           WHERE p.id = ?`,
+          [patientId]
+        );
+        patients = reFetch;
+      }
+    }
 
     if (patients.length === 0) {
       return res.status(404).json({ message: 'Profil patient non trouvé' });

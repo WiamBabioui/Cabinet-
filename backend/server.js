@@ -106,4 +106,4 @@ httpServer.listen(PORT, () => {
   console.log(`Serveur lance sur http://localhost:${PORT}`);
 });
 
-// Database connection verified and watch reloaded.
+// Database connection verified and watch reloaded. Updated comment to trigger reload.

@@ -1,9 +1,16 @@
+// backend/controllers/chat.controller.js
+// Full rewrite with hierarchy-aware contact list, conversation retrieval,
+// and message sending. All endpoints enforce the cabinet hierarchy rules.
+
 import mongoose from 'mongoose';
 import pool from '../config/db.mysql.js';
 import { getSocket } from '../config/socket.js';
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import { createNotification } from './notification.controller.js';
+import { canCommunicate, getUserHierarchyInfo } from '../middleware/hierarchy.middleware.js';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const normalizeId = (value) => Number.parseInt(value, 10);
 
@@ -11,6 +18,21 @@ const normalizeParticipants = (user1, user2) => {
   const ids = [normalizeId(user1), normalizeId(user2)];
   if (ids.some(Number.isNaN)) return null;
   return ids.sort((a, b) => a - b);
+};
+
+const getUserDetails = async (userId) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT id, prenom, nom, COALESCE(NULLIF(role, ''), 'patient') as \`role\`, photo_url
+       FROM utilisateurs
+       WHERE id = ? AND actif = 1 AND deleted_at IS NULL`,
+      [normalizeId(userId)]
+    );
+    return rows[0] || null;
+  } catch (err) {
+    console.error('getUserDetails error:', err.message);
+    return null;
+  }
 };
 
 const serializeMessage = async (message) => {
@@ -33,7 +55,7 @@ const serializeMessage = async (message) => {
     createdAt: raw.createdAt,
     created_at: raw.createdAt,
     updatedAt: raw.updatedAt,
-    senderDetails
+    senderDetails,
   };
 };
 
@@ -41,7 +63,6 @@ const serializeConversation = async (conversation, userId) => {
   const parts = conversation.participants;
   if (!Array.isArray(parts) || parts.length < 2) return null;
 
-  // Explicit Number coercion ensures === works regardless of BSON/JS type
   const userIdNum = Number(userId);
   if (isNaN(userIdNum)) return null;
 
@@ -66,9 +87,143 @@ const serializeConversation = async (conversation, userId) => {
   };
 };
 
+const getOrCreateConversation = async (user1, user2) => {
+  const participants = normalizeParticipants(user1, user2);
+  if (!participants) throw new Error('Invalid conversation participants');
+  const participantKey = participants.join(':');
+
+  let conversation = await Conversation.findOne({
+    $or: [{ participantKey }, { participants: { $all: participants, $size: 2 } }],
+  });
+
+  if (conversation) {
+    if (!conversation.participantKey) {
+      conversation.participantKey = participantKey;
+      await conversation.save();
+    }
+    return conversation;
+  }
+
+  try {
+    return await Conversation.create({
+      participants,
+      participantKey,
+      unreadCounts: { [participants[0]]: 0, [participants[1]]: 0 },
+    });
+  } catch (err) {
+    if (err.code === 11000) {
+      const existing = await Conversation.findOne({ participantKey });
+      if (existing) return existing;
+    }
+    throw err;
+  }
+};
+
+// ─── GET /chat/contacts ───────────────────────────────────────────────────────
+// Returns only the users this person is allowed to communicate with
+// based on the cabinet hierarchy.
+export const getContacts = async (req, res) => {
+  const { role, id } = req.user;
+  const userRole = role?.toLowerCase().trim();
+  const userId = normalizeId(id);
+
+  try {
+    let contacts = [];
+
+    if (userRole === 'medecin') {
+      // Doctor sees: all patients + all secretaries assigned to them
+      const [rows] = await pool.execute(
+        `SELECT u.id, u.prenom, u.nom, u.role, u.photo_url
+         FROM utilisateurs u
+         WHERE u.assigned_doctor_id = ?
+           AND u.role IN ('patient', 'secretaire')
+           AND u.actif = 1
+           AND u.deleted_at IS NULL
+         ORDER BY u.role, u.nom`,
+        [userId]
+      );
+      contacts = rows;
+
+    } else if (userRole === 'patient') {
+      // Patient sees: their assigned doctor + secretaries of same doctor
+      const [userRows] = await pool.execute(
+        `SELECT assigned_doctor_id FROM utilisateurs WHERE id = ? AND actif = 1`,
+        [userId]
+      );
+      const assignedDoctorId = userRows[0]?.assigned_doctor_id;
+
+      if (assignedDoctorId) {
+        // Get the assigned doctor
+        const [doctorRows] = await pool.execute(
+          `SELECT u.id, u.prenom, u.nom, u.role, u.photo_url
+           FROM utilisateurs u
+           WHERE u.id = ? AND u.role = 'medecin' AND u.actif = 1 AND u.deleted_at IS NULL`,
+          [assignedDoctorId]
+        );
+
+        // Get secretaries assigned to the same doctor
+        const [secRows] = await pool.execute(
+          `SELECT u.id, u.prenom, u.nom, u.role, u.photo_url
+           FROM utilisateurs u
+           WHERE u.assigned_doctor_id = ?
+             AND u.role = 'secretaire'
+             AND u.actif = 1
+             AND u.deleted_at IS NULL
+           ORDER BY u.nom`,
+          [assignedDoctorId]
+        );
+
+        contacts = [...doctorRows, ...secRows];
+      }
+
+    } else if (userRole === 'secretaire') {
+      // Secretary sees: their assigned doctor + patients of same doctor
+      const [userRows] = await pool.execute(
+        `SELECT assigned_doctor_id FROM utilisateurs WHERE id = ? AND actif = 1`,
+        [userId]
+      );
+      const assignedDoctorId = userRows[0]?.assigned_doctor_id;
+
+      if (assignedDoctorId) {
+        // Get the assigned doctor
+        const [doctorRows] = await pool.execute(
+          `SELECT u.id, u.prenom, u.nom, u.role, u.photo_url
+           FROM utilisateurs u
+           WHERE u.id = ? AND u.role = 'medecin' AND u.actif = 1 AND u.deleted_at IS NULL`,
+          [assignedDoctorId]
+        );
+
+        // Get patients assigned to the same doctor
+        const [patientRows] = await pool.execute(
+          `SELECT u.id, u.prenom, u.nom, u.role, u.photo_url
+           FROM utilisateurs u
+           WHERE u.assigned_doctor_id = ?
+             AND u.role = 'patient'
+             AND u.actif = 1
+             AND u.deleted_at IS NULL
+           ORDER BY u.nom`,
+          [assignedDoctorId]
+        );
+
+        contacts = [...doctorRows, ...patientRows];
+      }
+
+    } else {
+      // Admin and unknown roles get empty contact list
+      return res.json({ contacts: [] });
+    }
+
+    res.json({ contacts });
+  } catch (err) {
+    console.error('getContacts error:', err);
+    res.status(500).json({ message: 'Erreur serveur contacts', error: err.message });
+  }
+};
+
+// ─── GET /chat/conversations ──────────────────────────────────────────────────
+// Returns conversations that are authorized under the current hierarchy.
 export const getConversations = async (req, res) => {
   const userId = normalizeId(req.user.id);
-  const userRole = req.user.role?.toLowerCase().trim();
   if (isNaN(userId)) {
     return res.status(400).json({ message: 'Utilisateur invalide' });
   }
@@ -76,27 +231,25 @@ export const getConversations = async (req, res) => {
   try {
     const conversations = await Conversation.find({ participants: userId })
       .sort({ lastMessageAt: -1, updatedAt: -1 })
-      .limit(50);
+      .limit(100);
 
-    console.log(`[chat] getConversations: userId=${userId}, raw=${conversations.length}`);
-
-    const conversationsWithDetails = await Promise.all(
+    const serialized = await Promise.all(
       conversations.map((conv) => serializeConversation(conv, userId))
     );
 
-    let filtered = conversationsWithDetails.filter(Boolean);
+    // Filter out null serializations and enforce hierarchy
+    const authorizedConvs = [];
+    for (const conv of serialized) {
+      if (!conv || !conv.other_user?.id) continue;
 
-    // Patients must only chat with medecin/secretaire — remove patient-to-patient convs
-    if (userRole === 'patient') {
-      filtered = filtered.filter((conv) => {
-        const otherRole = conv.other_user?.role?.toLowerCase().trim();
-        return otherRole === 'medecin' || otherRole === 'secretaire';
-      });
+      // Verify this conversation partner is still in the user's hierarchy
+      const allowed = await canCommunicate(userId, conv.other_user.id);
+      if (allowed) {
+        authorizedConvs.push(conv);
+      }
     }
 
-    console.log(`[chat] getConversations: serialized=${filtered.length}`);
-
-    res.json({ conversations: filtered });
+    res.json({ conversations: authorizedConvs });
   } catch (err) {
     console.error('getConversations error:', err);
     res.status(500).json({
@@ -106,7 +259,9 @@ export const getConversations = async (req, res) => {
   }
 };
 
-
+// ─── GET /chat/messages/:userId ───────────────────────────────────────────────
+// Hierarchy check is enforced by requireCanCommunicate middleware on the route.
+// This handler can trust the user is authorized.
 export const getMessages = async (req, res) => {
   const meId = normalizeId(req.user.id);
   const otherId = normalizeId(req.params.userId);
@@ -114,9 +269,6 @@ export const getMessages = async (req, res) => {
 
   if (Number.isNaN(otherId)) {
     return res.status(400).json({ message: 'Utilisateur invalide' });
-  }
-  if (Number.isNaN(meId)) {
-    return res.status(400).json({ message: 'Utilisateur authentifié invalide' });
   }
 
   try {
@@ -161,12 +313,13 @@ export const getMessages = async (req, res) => {
   }
 };
 
+// ─── POST /chat/messages ──────────────────────────────────────────────────────
+// Hierarchy check is enforced by requireCanCommunicateBody middleware on the route.
 export const sendMessage = async (req, res) => {
   const { destinataire_id, contenu, receiverId, content } = req.body;
   const senderId = normalizeId(req.user.id);
   const receiver = normalizeId(destinataire_id ?? receiverId);
   const text = String(contenu ?? content ?? '').trim();
-  const senderRole = req.user.role?.toLowerCase().trim();
 
   if (Number.isNaN(receiver)) return res.status(400).json({ message: 'Destinataire invalide' });
   if (!text) return res.status(400).json({ message: 'Message vide' });
@@ -175,25 +328,19 @@ export const sendMessage = async (req, res) => {
     const receiverDetails = await getUserDetails(receiver);
     if (!receiverDetails) return res.status(404).json({ message: 'Utilisateur introuvable' });
 
-    // Patients cannot send messages to other patients
-    const receiverRole = receiverDetails.role?.toLowerCase().trim();
-    if (senderRole === 'patient' && receiverRole === 'patient') {
-      return res.status(403).json({ message: 'Les patients ne peuvent pas se contacter entre eux' });
-    }
-
     const conversation = await getOrCreateConversation(senderId, receiver);
     const created = await Message.create({
       conversationId: conversation._id,
       senderId,
       receiverId: receiver,
-      content: text
+      content: text,
     });
 
     const updatedConversation = await Conversation.findOneAndUpdate(
       { _id: conversation._id },
       {
         $set: { lastMessage: text.substring(0, 100), lastMessageAt: created.createdAt },
-        $inc: { [`unreadCounts.${receiver}`]: 1 }
+        $inc: { [`unreadCounts.${receiver}`]: 1 },
       },
       { new: true }
     );
@@ -212,7 +359,7 @@ export const sendMessage = async (req, res) => {
       receiver,
       'message_new',
       'Nouveau message',
-      `${senderDetails.prenom || ''} vous a envoye un message : ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`,
+      `${senderDetails.prenom || ''} vous a envoyé un message : ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`,
       { conversation_id: conversation._id.toString(), expediteur_id: senderId }
     );
 
@@ -223,58 +370,7 @@ export const sendMessage = async (req, res) => {
   }
 };
 
-export const getContacts = async (req, res) => {
-  const { role, id } = req.user;
-  const userRole = role?.toLowerCase().trim();
-  const userId = normalizeId(id);
-
-  try {
-    let query;
-    let params = [];
-
-    // Correction : Utilisation de backticks `role` car c'est un mot réservé MySQL 8
-    if (userRole === 'medecin') {
-      query = `
-        SELECT DISTINCT u.id, u.prenom, u.nom, COALESCE(NULLIF(u.role, ''), 'patient') as \`role\`, u.photo_url
-        FROM utilisateurs u
-        WHERE u.id != ?
-          AND (u.role = 'patient' OR u.role = 'secretaire' OR u.role = '' OR u.role IS NULL)
-          AND u.actif = 1
-          AND u.deleted_at IS NULL
-        ORDER BY \`role\`, u.nom`;
-      params = [userId];
-    } else if (userRole === 'patient' || !userRole) {
-      query = `
-        SELECT DISTINCT u.id, u.prenom, u.nom, u.role as \`role\`, u.photo_url
-        FROM utilisateurs u
-        WHERE (u.role = 'medecin' OR u.role = 'secretaire') 
-          AND u.actif = 1 
-          AND u.deleted_at IS NULL
-        ORDER BY \`role\`, u.nom`;
-        params = [];
-    } else if (userRole === 'secretaire') {
-      query = `
-        SELECT DISTINCT u.id, u.prenom, u.nom, COALESCE(NULLIF(u.role, ''), 'patient') as \`role\`, u.photo_url
-        FROM utilisateurs u
-        WHERE u.id != ?
-          AND (u.role = 'medecin' OR u.role = 'patient' OR u.role = '' OR u.role IS NULL)
-          AND u.actif = 1
-          AND u.deleted_at IS NULL
-        ORDER BY \`role\`, u.nom`;
-      params = [userId];
-    } else {
-      return res.json({ contacts: [] });
-    }
-
-    const [contacts] = await pool.query(query, params);
-    res.json({ contacts });
-  } catch (err) {
-    console.error('getContacts error:', err);
-    // On renvoie l'erreur détaillée pour aider au debug
-    res.status(500).json({ message: 'Erreur serveur contacts', error: err.message });
-  }
-};
-
+// ─── DELETE /chat/messages/:messageId ────────────────────────────────────────
 export const deleteMessage = async (req, res) => {
   const userId = normalizeId(req.user.id);
   const { messageId } = req.params;
@@ -286,63 +382,16 @@ export const deleteMessage = async (req, res) => {
   try {
     const message = await Message.findOne({ _id: messageId, deleted: { $ne: true } });
     if (!message) return res.status(404).json({ message: 'Message introuvable' });
-    if (message.senderId !== userId) return res.status(403).json({ message: 'Non autorise' });
+    if (message.senderId !== userId) return res.status(403).json({ message: 'Non autorisé' });
 
     message.deleted = true;
     await message.save();
 
     getSocket().to(`conv_${message.conversationId}`).emit('message_deleted', message._id.toString());
 
-    res.json({ message: 'Message supprime avec succes' });
+    res.json({ message: 'Message supprimé avec succès' });
   } catch (err) {
     console.error('deleteMessage error:', err);
     res.status(500).json({ message: 'Erreur serveur' });
-  }
-};
-
-const getUserDetails = async (userId) => {
-  try {
-    const [rows] = await pool.query(
-      `SELECT id, prenom, nom, COALESCE(NULLIF(role, ''), 'patient') as \`role\`, photo_url
-       FROM utilisateurs
-       WHERE id = ? AND actif = 1 AND deleted_at IS NULL`,
-      [normalizeId(userId)]
-    );
-    return rows[0] || null;
-  } catch (err) {
-    console.error("getUserDetails error:", err.message);
-    return null;
-  }
-};
-
-const getOrCreateConversation = async (user1, user2) => {
-  const participants = normalizeParticipants(user1, user2);
-  if (!participants) throw new Error('Invalid conversation participants');
-  const participantKey = participants.join(':');
-
-  let conversation = await Conversation.findOne({
-    $or: [{ participantKey }, { participants: { $all: participants, $size: 2 } }]
-  });
-
-  if (conversation) {
-    if (!conversation.participantKey) {
-      conversation.participantKey = participantKey;
-      await conversation.save();
-    }
-    return conversation;
-  }
-
-  try {
-    return await Conversation.create({
-      participants,
-      participantKey,
-      unreadCounts: { [participants[0]]: 0, [participants[1]]: 0 }
-    });
-  } catch (err) {
-    if (err.code === 11000) {
-      const existing = await Conversation.findOne({ participantKey });
-      if (existing) return existing;
-    }
-    throw err;
   }
 };

@@ -12,11 +12,13 @@ const Signup = () => {
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState('');
   const [specialites, setSpecialites] = useState([]);
+  const [medecins, setMedecins]       = useState([]);
   const { t } = useTranslation();
 
   const [form, setForm] = useState({
     prenom: '', nom: '', email: '', mot_de_passe: '',
     telephone: '', specialite_id: '', num_ordre: '',
+    assigned_doctor_id: '',
   });
 
   const { signup } = useAuth();
@@ -27,6 +29,15 @@ const Signup = () => {
     if (role === 'medecin') {
       api.get('/users/specialites')
         .then(res => setSpecialites(res.data.specialites))
+        .catch(() => {});
+    }
+  }, [role]);
+
+  // Charger les médecins si rôle patient ou secrétaire
+  useEffect(() => {
+    if (role === 'patient' || role === 'secretaire') {
+      api.get('/users/medecins-list')
+        .then(res => setMedecins(res.data.medecins))
         .catch(() => {});
     }
   }, [role]);
@@ -138,6 +149,34 @@ const Signup = () => {
             </div>
             <Input label={t('users.modal.order_num')} name="num_ordre" icon={ShieldCheck}
               value={form.num_ordre} onChange={handleChange} required />
+          </div>
+        )}
+
+        {/* Champs spécifiques aux patients et secrétaires (Médecin assigné) */}
+        {(role === 'patient' || role === 'secretaire') && (
+          <div className="space-y-5">
+            <div className="relative group">
+              <select
+                name="assigned_doctor_id"
+                value={form.assigned_doctor_id}
+                onChange={handleChange}
+                required
+                className="w-full bg-white/50 border border-slate-200/50 rounded-2xl px-5 pt-8 pb-3 outline-none transition-all duration-300 font-medium text-slate-700 focus:bg-white focus:border-purple focus:ring-4 focus:ring-purple/20 appearance-none"
+              >
+                <option value="">{t('auth.signup.assigned_doctor_select', 'Sélectionner un médecin *')}</option>
+                {medecins.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.titre ? `${m.titre} ` : ''}Dr. {m.prenom} {m.nom.toUpperCase()} ({m.specialite})
+                  </option>
+                ))}
+              </select>
+              <label className="absolute start-5 top-2.5 text-[9px] font-black text-slate-400 uppercase tracking-widest pointer-events-none">
+                {t('auth.signup.assigned_doctor', 'Médecin assigné')}
+              </label>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+              </div>
+            </div>
           </div>
         )}
 

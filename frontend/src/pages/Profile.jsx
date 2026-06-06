@@ -251,6 +251,16 @@ const Profile = () => {
                  <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-none mb-2">{user?.prenom} {user?.nom}</h2>
                  <p className="text-sm font-bold text-slate-400 mb-6">{user?.email}</p>
                  <Badge variant="purple" className="px-4 py-1.5 rounded-xl uppercase tracking-widest text-[10px]">{t(`roles.${user?.role}`)}</Badge>
+                 {(user?.role?.toLowerCase().trim() === 'patient' || user?.role?.toLowerCase().trim() === 'secretaire') && user?.assigned_doctor_nom && (
+                    <div className="mt-4 text-center">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                        {t('profile.form.assigned_doctor', 'Médecin assigné')}
+                      </span>
+                      <span className="text-sm font-bold text-slate-700">
+                        Dr. {user.assigned_doctor_prenom} {user.assigned_doctor_nom.toUpperCase()}
+                      </span>
+                    </div>
+                  )}
               </div>
            </Card>
 
@@ -323,6 +333,22 @@ const Profile = () => {
                          <Input label={t('profile.form.lastname')} icon={User} value={form.nom} onChange={e => setForm({...form, nom: e.target.value})} />
                        </div>
                        <Input label={t('profile.form.phone')} icon={Phone} value={form.telephone} onChange={e => setForm({...form, telephone: e.target.value})} />
+                       
+                       {(user?.role?.toLowerCase().trim() === 'patient' || user?.role?.toLowerCase().trim() === 'secretaire') && user?.assigned_doctor_nom && (
+                          <div className="p-5 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between">
+                            <div>
+                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                                {t('profile.form.assigned_doctor', 'Médecin référent')}
+                              </span>
+                              <span className="text-sm font-bold text-slate-800">
+                                Dr. {user.assigned_doctor_prenom} {user.assigned_doctor_nom.toUpperCase()}
+                              </span>
+                            </div>
+                            <Badge variant="purple" className="px-3 py-1 rounded-lg uppercase tracking-wider text-[9px] font-bold">
+                              Assigné
+                            </Badge>
+                          </div>
+                        )}
 
                        {user?.role?.toLowerCase().trim() === 'medecin' && (
                          <div className="space-y-8 pt-4 border-t border-slate-100">

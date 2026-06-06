@@ -60,7 +60,7 @@ const PatientPortal = () => {
     );
   }
 
-  if (error) {
+  if (error || !data || !data.patient) {
     return (
       <div className="h-[calc(100vh-160px)] flex items-center justify-center p-8">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-coral/5 border border-coral/20 p-12 rounded-[3rem] text-center max-w-lg shadow-premium">
@@ -68,23 +68,35 @@ const PatientPortal = () => {
              <AlertCircle size={48} strokeWidth={2.5} />
           </div>
           <h2 className="text-2xl font-black text-slate-800 mb-2">{t('portal.error.oops')}</h2>
-          <p className="text-slate-500 font-medium leading-relaxed">{error}</p>
+          <p className="text-slate-500 font-medium leading-relaxed">{error || "Impossible de charger votre profil"}</p>
           <Button variant="outline" className="mt-8 px-10 h-14" onClick={() => window.location.reload()}>Reessayer</Button>
         </motion.div>
       </div>
     );
   }
 
-  const { patient, dossier, prochainRDV, consultations } = data;
+  const { patient, dossier, prochainRDV, consultations = [] } = data;
 
   // Calcul de l'âge
   const age = patient.date_naissance 
     ? new Date().getFullYear() - new Date(patient.date_naissance).getFullYear() 
     : 'N/A';
 
+  const safeFormat = (dateStr, formatStr) => {
+    try {
+      if (!dateStr) return '—';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '—';
+      return format(d, formatStr, { locale: getLocale() });
+    } catch (e) {
+      return '—';
+    }
+  };
+
   const getLocale = () => {
-    if (i18n.language === 'ar') return arMA;
-    if (i18n.language === 'en') return enUS;
+    const lang = i18n.language || 'fr';
+    if (lang.startsWith('ar')) return arMA;
+    if (lang.startsWith('en')) return enUS;
     return fr;
   };
 
@@ -162,10 +174,10 @@ const PatientPortal = () => {
                   <div className="flex gap-6">
                     <div className="w-20 h-20 bg-gradient-to-br from-purple to-indigo rounded-[1.75rem] flex flex-col items-center justify-center shadow-glow border border-white/20">
                       <span className="text-[11px] font-black text-white/70 uppercase tracking-widest">
-                        {format(new Date(prochainRDV.date_heure_debut), 'MMM', { locale: getLocale() })}
+                        {safeFormat(prochainRDV.date_heure_debut, 'MMM')}
                       </span>
                       <span className="text-3xl font-black text-white tracking-tighter leading-none mt-1">
-                        {format(new Date(prochainRDV.date_heure_debut), 'dd', { locale: getLocale() })}
+                        {safeFormat(prochainRDV.date_heure_debut, 'dd')}
                       </span>
                     </div>
                     <div>
@@ -173,7 +185,7 @@ const PatientPortal = () => {
                       <div className="flex flex-wrap gap-4">
                          <p className="text-xs font-black text-slate-400 uppercase tracking-[0.15em] flex items-center gap-2">
                             <Clock size={14} className="text-purple/50" /> 
-                            {format(new Date(prochainRDV.date_heure_debut), 'HH:mm', { locale: getLocale() })}
+                            {safeFormat(prochainRDV.date_heure_debut, 'HH:mm')}
                          </p>
                          <p className="text-xs font-black text-slate-400 uppercase tracking-[0.15em] flex items-center gap-2">
                             <Stethoscope size={14} className="text-purple/50" />
@@ -232,7 +244,7 @@ const PatientPortal = () => {
                              </span>
                              <span className="w-1 h-1 rounded-full bg-slate-200" />
                              <span className="text-[10px] text-purple font-black uppercase tracking-[0.15em]">
-                               {format(new Date(consult.date_consultation), 'dd MMMM yyyy', { locale: getLocale() })}
+                               {safeFormat(consult.date_consultation, 'dd MMMM yyyy')}
                              </span>
                           </div>
                         </div>

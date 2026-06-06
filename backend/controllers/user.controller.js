@@ -22,13 +22,16 @@ export const getUserById = async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT u.id, u.uuid, u.email, u.role, u.prenom, u.nom, u.telephone, u.photo_url,
-              u.actif, u.created_at,
+              u.actif, u.created_at, u.assigned_doctor_id,
               m.id as medecin_id, m.specialite_id, m.titre,
               m.consultation_tarif, m.consultation_duree, m.disponible,
-              s.libelle as specialite
+              s.libelle as specialite,
+              ud.prenom as assigned_doctor_prenom,
+              ud.nom as assigned_doctor_nom
        FROM utilisateurs u
        LEFT JOIN medecins m ON m.utilisateur_id = u.id
        LEFT JOIN specialites s ON s.id = m.specialite_id
+       LEFT JOIN utilisateurs ud ON ud.id = u.assigned_doctor_id
        WHERE u.id = ? AND u.deleted_at IS NULL`,
       [req.params.id]
     );
@@ -127,3 +130,24 @@ export const getSpecialites = async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
+
+// ✅ LISTE des médecins actifs (public — pour le formulaire d'inscription)
+export const getMedecinsList = async (req, res) => {
+  try {
+    const [medecins] = await pool.execute(
+      `SELECT u.id, u.prenom, u.nom, u.photo_url,
+              m.titre, m.consultation_tarif,
+              s.libelle as specialite
+       FROM utilisateurs u
+       JOIN medecins m ON m.utilisateur_id = u.id
+       JOIN specialites s ON s.id = m.specialite_id
+       WHERE u.actif = 1 AND u.deleted_at IS NULL
+       ORDER BY u.nom`
+    );
+    res.json({ medecins });
+  } catch (err) {
+    console.error('getMedecinsList error:', err);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+

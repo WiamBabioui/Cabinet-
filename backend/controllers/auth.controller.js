@@ -9,9 +9,15 @@ const generateToken = (id) => {
   });
 };
 
-// ✅ INSCRIPTION
+// ─── INSCRIPTION ─────────────────────────────────────────────────────────────
 export const signup = async (req, res) => {
-  const { prenom, nom, email, mot_de_passe, role, telephone } = req.body;
+  const {
+    prenom, nom, email, mot_de_passe, role, telephone,
+    // Doctor-specific
+    specialite_id, num_ordre,
+    // Patient/Secretary-specific
+    assigned_doctor_id,
+  } = req.body;
 
   // Rôles autorisés
   const rolesAutorises = ['admin', 'medecin', 'secretaire', 'patient'];
@@ -19,31 +25,62 @@ export const signup = async (req, res) => {
     return res.status(400).json({ message: 'Rôle invalide' });
   }
 
+  // Patients and secretaries MUST have an assigned doctor
+  if ((role === 'patient' || role === 'secretaire') && !assigned_doctor_id) {
+    return res.status(400).json({
+      message: `Un médecin assigné est requis pour le rôle ${role}`,
+    });
+  }
+
   try {
+    // Verify email is unique
     const [existing] = await pool.execute(
       'SELECT id FROM utilisateurs WHERE email = ?',
       [email]
     );
-
     if (existing.length > 0) {
       return res.status(400).json({ message: 'Cet email est déjà utilisé' });
     }
 
+    // Validate assigned doctor exists and has role 'medecin'
+    if (assigned_doctor_id) {
+      const [doctorRows] = await pool.execute(
+        `SELECT id FROM utilisateurs
+         WHERE id = ? AND role = 'medecin' AND actif = 1 AND deleted_at IS NULL`,
+        [Number(assigned_doctor_id)]
+      );
+      if (doctorRows.length === 0) {
+        return res.status(400).json({
+          message: 'Le médecin sélectionné est introuvable ou inactif',
+        });
+      }
+    }
+
     const hash = await bcrypt.hash(mot_de_passe, 12);
 
+    // Insert the user with assigned_doctor_id
     const [result] = await pool.execute(
-      `INSERT INTO utilisateurs (email, mot_de_passe_hash, role, prenom, nom, telephone)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [email, hash, role, prenom, nom, telephone || null]
+      `INSERT INTO utilisateurs (email, mot_de_passe_hash, role, prenom, nom, telephone, assigned_doctor_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        email,
+        hash,
+        role,
+        prenom,
+        nom,
+        telephone || null,
+        assigned_doctor_id ? Number(assigned_doctor_id) : null,
+      ]
     );
 
     const userId = result.insertId;
 
-    // Si médecin → créer profil médecin
+    // If doctor → create medecins profile
     if (role === 'medecin') {
-      const { specialite_id, num_ordre } = req.body;
       if (!specialite_id || !num_ordre) {
-        return res.status(400).json({ message: 'specialite_id et num_ordre requis pour un médecin' });
+        return res.status(400).json({
+          message: 'specialite_id et num_ordre requis pour un médecin',
+        });
       }
       await pool.execute(
         `INSERT INTO medecins (utilisateur_id, specialite_id, num_ordre)
@@ -57,23 +94,29 @@ export const signup = async (req, res) => {
     res.status(201).json({
       message: 'Compte créé avec succès',
       token,
-      user: { id: userId, prenom, nom, email, role }
+      user: {
+        id: userId,
+        prenom,
+        nom,
+        email,
+        role,
+        assigned_doctor_id: assigned_doctor_id ? Number(assigned_doctor_id) : null,
+      },
     });
-
   } catch (err) {
     console.error('Signup error:', err);
-    res.status(500).json({ message: 'Erreur serveur lors de l\'inscription' });
+    res.status(500).json({ message: "Erreur serveur lors de l'inscription" });
   }
 };
 
-// ✅ CONNEXION
+// ─── CONNEXION ────────────────────────────────────────────────────────────────
 export const login = async (req, res) => {
   const { email, mot_de_passe } = req.body;
 
   try {
     const [rows] = await pool.execute(
       `SELECT id, uuid, email, mot_de_passe_hash, role, prenom, nom, actif,
-              tentatives_connexion, bloque_jusqu_au, photo_url
+              tentatives_connexion, bloque_jusqu_au, photo_url, assigned_doctor_id
        FROM utilisateurs WHERE email = ? AND deleted_at IS NULL`,
       [email]
     );
@@ -85,7 +128,9 @@ export const login = async (req, res) => {
     const user = rows[0];
 
     if (user.bloque_jusqu_au && new Date(user.bloque_jusqu_au) > new Date()) {
-      return res.status(403).json({ message: 'Compte temporairement bloqué. Réessayez plus tard.' });
+      return res.status(403).json({
+        message: 'Compte temporairement bloqué. Réessayez plus tard.',
+      });
     }
 
     if (!user.actif) {
@@ -133,25 +178,30 @@ export const login = async (req, res) => {
         email: user.email,
         role: user.role,
         photo_url: user.photo_url,
-      }
+        assigned_doctor_id: user.assigned_doctor_id,
+      },
     });
-
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ message: 'Erreur serveur lors de la connexion' });
   }
 };
 
-// ✅ MON PROFIL
+// ─── MON PROFIL ───────────────────────────────────────────────────────────────
 export const getMe = async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT u.id, u.uuid, u.email, u.role, u.prenom, u.nom, u.telephone, u.photo_url,
+              u.assigned_doctor_id,
               m.id as medecin_id, m.specialite_id, m.titre, m.consultation_tarif,
-              s.libelle as specialite
+              s.libelle as specialite,
+              -- Assigned doctor details (for patients/secretaries)
+              ud.prenom as assigned_doctor_prenom,
+              ud.nom as assigned_doctor_nom
        FROM utilisateurs u
        LEFT JOIN medecins m ON m.utilisateur_id = u.id
        LEFT JOIN specialites s ON s.id = m.specialite_id
+       LEFT JOIN utilisateurs ud ON ud.id = u.assigned_doctor_id
        WHERE u.id = ?`,
       [req.user.id]
     );
@@ -162,7 +212,7 @@ export const getMe = async (req, res) => {
   }
 };
 
-// ✅ CHANGER MOT DE PASSE
+// ─── CHANGER MOT DE PASSE ─────────────────────────────────────────────────────
 export const changePassword = async (req, res) => {
   const { ancien_mdp, nouveau_mdp } = req.body;
 
