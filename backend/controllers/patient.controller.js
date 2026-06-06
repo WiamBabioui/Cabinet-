@@ -283,6 +283,7 @@ export const updateDossierMedical = async (req, res) => {
 // ✅ DONNÉES DU PORTAIL PATIENT
 export const getPortalData = async (req, res) => {
   const { email } = req.user;
+  console.log(`[PortalData] Fetching portal data for email: ${email}`);
   try {
     let [patients] = await pool.execute(
       `SELECT p.*, CONCAT(u.prenom, ' ', u.nom) as medecin_traitant
@@ -293,15 +294,27 @@ export const getPortalData = async (req, res) => {
       [email]
     );
 
+    console.log(`[PortalData] Initial lookup found ${patients.length} records`);
+
     if (patients.length === 0) {
+      console.log(`[PortalData] No patient record found for ${email}. Attempting lazy creation...`);
       // Lazy-create patients profile + medical file if user is a registered patient in utilisateurs
       const [userRows] = await pool.execute(
-        `SELECT id, prenom, nom, telephone, assigned_doctor_id FROM utilisateurs WHERE email = ? AND LOWER(role) = 'patient'`,
+        `SELECT id, prenom, nom, telephone, assigned_doctor_id, role FROM utilisateurs WHERE email = ? AND deleted_at IS NULL`,
         [email]
       );
 
+      console.log(`[PortalData] User lookup found ${userRows.length} user records`);
+
       if (userRows.length > 0) {
         const u = userRows[0];
+        console.log(`[PortalData] User found: ${u.email}, Role: ${u.role}`);
+        
+        if (u.role.toLowerCase() !== 'patient') {
+          console.warn(`[PortalData] User ${email} has role ${u.role}, NOT patient. Denying portal access.`);
+          return res.status(403).json({ message: 'Seuls les patients peuvent accéder à ce portail' });
+        }
+
         let medecinTraitantId = null;
         if (u.assigned_doctor_id) {
           const [medecinRows] = await pool.execute(
@@ -315,6 +328,8 @@ export const getPortalData = async (req, res) => {
 
         const num_dossier = generateNumDossier();
         const uuid = crypto.randomUUID();
+
+        console.log(`[PortalData] Creating new patient record for ${email} with dossier ${num_dossier}`);
 
         const sql = `INSERT INTO patients
             (uuid, num_dossier, prenom, nom, date_naissance, sexe, telephone, email, cin,
@@ -330,11 +345,13 @@ export const getPortalData = async (req, res) => {
         ]);
 
         const patientId = result.insertId;
+        console.log(`[PortalData] New patient created with ID: ${patientId}`);
 
         await pool.execute(
           'INSERT INTO dossiers_medicaux (patient_id) VALUES (?)',
           [patientId]
         );
+        console.log(`[PortalData] Medical file created for patient ID: ${patientId}`);
 
         const [reFetch] = await pool.execute(
           `SELECT p.*, CONCAT(u.prenom, ' ', u.nom) as medecin_traitant
@@ -345,14 +362,18 @@ export const getPortalData = async (req, res) => {
           [patientId]
         );
         patients = reFetch;
+      } else {
+        console.warn(`[PortalData] No user record found in utilisateurs for email: ${email}`);
       }
     }
 
     if (patients.length === 0) {
+      console.error(`[PortalData] Failed to resolve patient record for ${email}`);
       return res.status(404).json({ message: 'Profil patient non trouvé' });
     }
 
     const patient = patients[0];
+    console.log(`[PortalData] Successfully resolved patient: ${patient.prenom} ${patient.nom} (ID: ${patient.id})`);
 
     const [dossier] = await pool.execute(
       'SELECT * FROM dossiers_medicaux WHERE patient_id = ?',
