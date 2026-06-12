@@ -160,12 +160,16 @@ export const login = async (req, res) => {
     const token = generateToken(user.id);
 
     // Notification de bienvenue
-    await createNotification(
-      user.id,
-      'info',
-      'Bienvenue',
-      `Ravi de vous revoir, ${user.prenom} !`
-    );
+try {
+  await createNotification(
+    user.id,
+    'alerte_systeme',
+    'Bienvenue',
+    `Ravi de vous revoir, ${user.prenom} !`
+  );
+} catch (notifErr) {
+  console.warn('Notification error (non-blocking):', notifErr.message);
+}
 
     res.json({
       message: 'Connexion réussie',
