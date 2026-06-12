@@ -1,5 +1,5 @@
 import pool from '../config/db.mysql.js';
-import crypto from 'crypto'; // Ajouté pour générer l'UUID manquant
+import crypto from 'crypto';
 
 // ✅ Générer un numéro de dossier unique
 const generateNumDossier = () => {
@@ -9,18 +9,37 @@ const generateNumDossier = () => {
   return `DOS-${year}-${rand}`;
 };
 
-// ✅ LISTE des patients (Correction du problème LIMIT/OFFSET)
+// ✅ LISTE des patients (avec filtre par rôle)
 export const getPatients = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const search = req.query.search || '';
     const statut = req.query.statut || '';
-    
     const offset = (page - 1) * limit;
+
+    const { role, id } = req.user;
 
     let whereClause = 'WHERE p.deleted_at IS NULL';
     const params = [];
+
+    // ✅ Filtre par médecin selon le rôle
+    if (role === 'medecin') {
+      whereClause += ` AND p.assigned_doctor_id = ?`;
+      params.push(Number(id));
+    } else if (role === 'secretaire') {
+      const [userRows] = await pool.execute(
+        `SELECT assigned_doctor_id FROM utilisateurs WHERE id = ?`,
+        [Number(id)]
+      );
+      const doctorId = userRows[0]?.assigned_doctor_id;
+      if (doctorId) {
+        whereClause += ` AND p.assigned_doctor_id = ?`;
+        params.push(Number(doctorId));
+      } else {
+        return res.json({ patients: [], pagination: { total: 0, page, limit, pages: 0 } });
+      }
+    }
 
     if (search) {
       whereClause += ` AND (p.nom LIKE ? OR p.prenom LIKE ? OR p.telephone LIKE ? OR p.email LIKE ?)`;
@@ -33,15 +52,12 @@ export const getPatients = async (req, res) => {
       params.push(statut);
     }
 
-    // Total pour la pagination
     const [countResult] = await pool.execute(
       `SELECT COUNT(*) as total FROM patients p ${whereClause}`,
       params
     );
     const total = countResult[0].total;
 
-    // Correction : On utilise pool.query et on injecte les nombres limit/offset directement 
-    // pour éviter l'erreur "Incorrect arguments to mysqld_stmt_execute"
     const sql = `SELECT p.id, p.uuid, p.num_dossier, p.prenom, p.nom, p.date_naissance,
               p.sexe, p.telephone, p.email, p.adresse_ville, p.groupe_sanguin,
               p.assurance_nom, p.statut, p.created_at,
@@ -71,7 +87,7 @@ export const getPatients = async (req, res) => {
   }
 };
 
-// ✅ CRÉER un patient (Correction de l'alignement des colonnes)
+// ✅ CRÉER un patient (avec assigned_doctor_id automatique)
 export const createPatient = async (req, res) => {
   const {
     prenom, nom, date_naissance, sexe, telephone,
@@ -80,24 +96,37 @@ export const createPatient = async (req, res) => {
     medecin_traitant_id, notes_admin
   } = req.body;
 
+  const { role, id } = req.user;
+
   try {
     const num_dossier = generateNumDossier();
-    const uuid = crypto.randomUUID(); // Génération de l'UUID requis par la table
+    const uuid = crypto.randomUUID();
 
-    // Ajout de uuid et statut pour correspondre au nombre de colonnes attendu
+    // ✅ Trouver le médecin assigné automatiquement
+    let doctorId = null;
+    if (role === 'medecin') {
+      doctorId = Number(id);
+    } else if (role === 'secretaire') {
+      const [userRows] = await pool.execute(
+        'SELECT assigned_doctor_id FROM utilisateurs WHERE id = ?',
+        [Number(id)]
+      );
+      doctorId = userRows[0]?.assigned_doctor_id || null;
+    }
+
     const sql = `INSERT INTO patients
         (uuid, num_dossier, prenom, nom, date_naissance, sexe, telephone, email, cin,
          adresse_rue, adresse_ville, adresse_code_postal, adresse_pays,
          groupe_sanguin, assurance_nom, assurance_numero,
-         medecin_traitant_id, notes_admin, statut)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`; // 19 colonnes / 19 ?
+         medecin_traitant_id, assigned_doctor_id, notes_admin, statut)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
     const [result] = await pool.execute(sql, [
-        uuid, num_dossier, prenom, nom, date_naissance, sexe, telephone,
-        email || null, cin || null, adresse_rue || null, adresse_ville || null,
-        adresse_code_postal || null, adresse_pays || 'Maroc',
-        groupe_sanguin || null, assurance_nom || null, assurance_numero || null,
-        medecin_traitant_id || null, notes_admin || null, 'actif'
+      uuid, num_dossier, prenom, nom, date_naissance, sexe, telephone,
+      email || null, cin || null, adresse_rue || null, adresse_ville || null,
+      adresse_code_postal || null, adresse_pays || 'Maroc',
+      groupe_sanguin || null, assurance_nom || null, assurance_numero || null,
+      medecin_traitant_id || null, doctorId, notes_admin || null, 'actif'
     ]);
 
     const patientId = result.insertId;
@@ -252,7 +281,7 @@ export const deletePatient = async (req, res) => {
 
 // ✅ METTRE À JOUR le dossier médical
 export const updateDossierMedical = async (req, res) => {
-  const { id } = req.params; 
+  const { id } = req.params;
   const {
     allergies, antecedents_perso, antecedents_familiaux,
     traitements_en_cours, vaccinations, mode_vie
@@ -298,7 +327,6 @@ export const getPortalData = async (req, res) => {
 
     if (patients.length === 0) {
       console.log(`[PortalData] No patient record found for ${email}. Attempting lazy creation...`);
-      // Lazy-create patients profile + medical file if user is a registered patient in utilisateurs
       const [userRows] = await pool.execute(
         `SELECT id, prenom, nom, telephone, assigned_doctor_id, role FROM utilisateurs WHERE email = ? AND deleted_at IS NULL`,
         [email]
@@ -309,7 +337,7 @@ export const getPortalData = async (req, res) => {
       if (userRows.length > 0) {
         const u = userRows[0];
         console.log(`[PortalData] User found: ${u.email}, Role: ${u.role}`);
-        
+
         if (u.role.toLowerCase() !== 'patient') {
           console.warn(`[PortalData] User ${email} has role ${u.role}, NOT patient. Denying portal access.`);
           return res.status(403).json({ message: 'Seuls les patients peuvent accéder à ce portail' });
@@ -335,13 +363,13 @@ export const getPortalData = async (req, res) => {
             (uuid, num_dossier, prenom, nom, date_naissance, sexe, telephone, email, cin,
              adresse_rue, adresse_ville, adresse_code_postal, adresse_pays,
              groupe_sanguin, assurance_nom, assurance_numero,
-             medecin_traitant_id, notes_admin, statut)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+             medecin_traitant_id, assigned_doctor_id, notes_admin, statut)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
         const [result] = await pool.execute(sql, [
           uuid, num_dossier, u.prenom, u.nom, null, 'M', u.telephone || null,
           email, null, null, null, null, 'Maroc',
-          null, null, null, medecinTraitantId, null, 'actif'
+          null, null, null, medecinTraitantId, u.assigned_doctor_id || null, null, 'actif'
         ]);
 
         const patientId = result.insertId;
