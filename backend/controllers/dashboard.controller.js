@@ -1,11 +1,32 @@
 import pool from '../config/db.mysql.js';
 
-// ✅ STATS GÉNÉRALES du dashboard (Dev A)
+// ✅ STATS GÉNÉRALES du dashboard (avec filtre par rôle)
 export const getDashboardStats = async (req, res) => {
   try {
+    const { role, id } = req.user;
+
+    // ─── Trouver le doctorId selon le rôle ───────────────────
+    let doctorId = null;
+
+    if (role === 'medecin') {
+      doctorId = Number(id);
+    } else if (role === 'secretaire') {
+      const [userRows] = await pool.execute(
+        'SELECT assigned_doctor_id FROM utilisateurs WHERE id = ?',
+        [Number(id)]
+      );
+      doctorId = userRows[0]?.assigned_doctor_id || null;
+    }
+
+    // ─── Filtre patients ──────────────────────────────────────
+    const patientFilter = doctorId
+      ? `AND assigned_doctor_id = ${Number(doctorId)}`
+      : '';
+
     // Total patients actifs
     const [[{ total_patients }]] = await pool.execute(
-      "SELECT COUNT(*) as total_patients FROM patients WHERE statut = 'actif' AND deleted_at IS NULL"
+      `SELECT COUNT(*) as total_patients FROM patients
+       WHERE statut = 'actif' AND deleted_at IS NULL ${patientFilter}`
     );
 
     // Total utilisateurs actifs
@@ -23,7 +44,7 @@ export const getDashboardStats = async (req, res) => {
       `SELECT COUNT(*) as nouveaux_patients FROM patients
        WHERE MONTH(created_at) = MONTH(NOW())
        AND YEAR(created_at) = YEAR(NOW())
-       AND deleted_at IS NULL`
+       AND deleted_at IS NULL ${patientFilter}`
     );
 
     // RDV aujourd'hui
@@ -40,23 +61,23 @@ export const getDashboardStats = async (req, res) => {
        GROUP BY statut`
     );
 
-    // Patients par mois (6 derniers mois) pour le graphique
+    // Patients par mois (6 derniers mois)
     const [patients_par_mois] = await pool.execute(
-  `SELECT
-    DATE_FORMAT(created_at, '%Y-%m') as mois,
-    DATE_FORMAT(created_at, '%b') as label,
-    COUNT(*) as total
-   FROM patients
-   WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-   AND deleted_at IS NULL
-   GROUP BY DATE_FORMAT(created_at, '%Y-%m'), DATE_FORMAT(created_at, '%b')
-   ORDER BY mois ASC`
-);
+      `SELECT
+        DATE_FORMAT(created_at, '%Y-%m') as mois,
+        DATE_FORMAT(created_at, '%b') as label,
+        COUNT(*) as total
+       FROM patients
+       WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+       AND deleted_at IS NULL ${patientFilter}
+       GROUP BY DATE_FORMAT(created_at, '%Y-%m'), DATE_FORMAT(created_at, '%b')
+       ORDER BY mois ASC`
+    );
 
     // Répartition par sexe
     const [repartition_sexe] = await pool.execute(
       `SELECT sexe, COUNT(*) as total FROM patients
-       WHERE deleted_at IS NULL AND statut = 'actif'
+       WHERE deleted_at IS NULL AND statut = 'actif' ${patientFilter}
        GROUP BY sexe`
     );
 
