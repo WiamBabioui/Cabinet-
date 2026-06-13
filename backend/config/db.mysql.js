@@ -8,12 +8,13 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   port:     process.env.DB_PORT || 3306,
-  ssl: process.env.NODE_ENV === 'production' 
+  ssl: process.env.NODE_ENV === 'production'
     ? { rejectUnauthorized: false }
     : false,
   waitForConnections: true,
   connectionLimit: 10,
   charset: 'utf8mb4',
+  timezone: '+01:00',
 });
 
 pool.getConnection()
