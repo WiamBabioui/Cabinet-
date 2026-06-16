@@ -1,10 +1,9 @@
 import pool from '../config/db.mysql.js';
-import { createNotification } from './notification.controller.js';
 
 // ─── Helper: Map Statuses ──────────────────────────────────
 const mapStatusToDb = (status) => {
   const map = {
-    'pending': 'planifie',
+    'pending':   'planifie',
     'confirmed': 'confirme',
     'completed': 'termine',
     'cancelled': 'annule',
@@ -16,10 +15,41 @@ const mapStatusToClient = (status) => {
   const map = {
     'planifie': 'pending',
     'confirme': 'confirmed',
-    'termine': 'completed',
-    'annule': 'cancelled',
+    'termine':  'completed',
+    'annule':   'cancelled',
   };
   return map[status] || 'pending';
+};
+
+// ─── Helper: notification sans crasher ────────────────────
+const safeNotify = async (userId, type, titre, corps, contexte = null) => {
+  const validTypes = [
+    'rappel_rdv', 'confirmation_rdv', 'annulation_rdv',
+    'nouveau_document', 'paiement_recu', 'alerte_systeme', 'message_interne'
+  ];
+  const safeType = validTypes.includes(type) ? type : 'alerte_systeme';
+  try {
+    await pool.execute(
+      `INSERT INTO notifications (destinataire_id, type, titre, corps, donnees_contexte)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        Number(userId),
+        safeType,
+        titre,
+        corps,
+        contexte ? JSON.stringify(contexte) : null
+      ]
+    );
+  } catch (err) {
+    console.warn('Notification non-blocking error:', err.message);
+  }
+};
+
+// ─── Helper: format date LOCAL ─────────────────────────────
+const toLocalSQLString = (date) => {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
+         `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 };
 
 // ─── List appointments ─────────────────────────────────────
@@ -28,15 +58,24 @@ export const getAppointments = async (req, res) => {
   const { date, statut, search } = req.query;
 
   try {
-    let where  = 'WHERE 1=1';
+    let where = 'WHERE 1=1';
     const params = [];
 
     if (role === 'medecin') {
       where += ' AND m.utilisateur_id = ?';
-      params.push(id);
+      params.push(Number(id));
+    } else if (role === 'secretaire') {
+      // Secrétaire voit les RDV du médecin assigné
+      const [userRows] = await pool.execute(
+        'SELECT assigned_doctor_id FROM utilisateurs WHERE id = ?',
+        [Number(id)]
+      );
+      const doctorId = userRows[0]?.assigned_doctor_id;
+      if (doctorId) {
+        where += ' AND m.utilisateur_id = ?';
+        params.push(Number(doctorId));
+      }
     } else if (role === 'patient') {
-      // Patients table might not link to utilisateurs.id directly
-      // This part might need adjustment if patients use the app
       where += ' AND p.email = ?';
       params.push(req.user.email);
     }
@@ -63,7 +102,7 @@ export const getAppointments = async (req, res) => {
       `SELECT r.*,
               r.date_heure_debut AS date_heure,
               p.prenom AS patient_prenom, p.nom AS patient_nom,
-              u_m.prenom AS medecin_prenom, u_m.nom  AS medecin_nom
+              u_m.prenom AS medecin_prenom, u_m.nom AS medecin_nom
        FROM rendez_vous r
        JOIN patients p  ON p.id = r.patient_id
        JOIN medecins m  ON m.id = r.medecin_id
@@ -100,18 +139,18 @@ export const getAppointmentById = async (req, res) => {
        JOIN medecins m ON m.id = r.medecin_id
        JOIN utilisateurs u_m ON u_m.id = m.utilisateur_id
        WHERE r.id = ?`,
-      [req.params.id]
+      [Number(req.params.id)]
     );
 
     if (!rows.length) return res.status(404).json({ message: 'Rendez-vous introuvable' });
     const rdv = rows[0];
 
-    res.json({ 
+    res.json({
       appointment: {
         ...rdv,
         statut: mapStatusToClient(rdv.statut),
         type_rdv: rdv.type_consultation
-      } 
+      }
     });
   } catch (err) {
     console.error('getAppointmentById error:', err);
@@ -119,49 +158,58 @@ export const getAppointmentById = async (req, res) => {
   }
 };
 
-// ─── Helper: format a JS Date as 'YYYY-MM-DD HH:MM:SS' in LOCAL time (no UTC shift)
-const toLocalSQLString = (date) => {
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
-         `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-};
-
 // ─── Create appointment ────────────────────────────────────
 export const createAppointment = async (req, res) => {
-  const { patient_email, medecin_id: bodyMedecinId, date_heure, duree = 30, type_rdv = 'suivi', motif, notes } = req.body;
+  const {
+    patient_email,
+    medecin_id: bodyMedecinId,
+    date_heure,
+    duree = 30,
+    type_rdv = 'suivi',
+    motif,
+    notes
+  } = req.body;
 
   try {
-    // 1. Find medecin_id (the PK in 'medecins' table)
+    // 1. Trouver utilisateur_id du médecin
     let utilisateur_id = bodyMedecinId;
     if (!utilisateur_id && req.user.role === 'medecin') {
       utilisateur_id = req.user.id;
     }
+    if (!utilisateur_id) {
+      return res.status(400).json({ message: 'medecin_id est requis' });
+    }
 
-    if (!utilisateur_id) return res.status(400).json({ message: 'medecin_id est requis' });
-
-    const [medecinRows] = await pool.execute('SELECT id FROM medecins WHERE utilisateur_id = ?', [utilisateur_id]);
+    const [medecinRows] = await pool.execute(
+      'SELECT id FROM medecins WHERE utilisateur_id = ?',
+      [Number(utilisateur_id)]
+    );
     if (medecinRows.length === 0) {
       return res.status(404).json({ message: 'Médecin non trouvé' });
     }
     const mid = medecinRows[0].id;
 
-    // 2. Find patient_id (the PK in 'patients' table)
-    const [patientRows] = await pool.execute('SELECT id FROM patients WHERE email = ? AND deleted_at IS NULL', [patient_email]);
+    // 2. Trouver patient par email
+    if (!patient_email) {
+      return res.status(400).json({ message: 'Email du patient requis' });
+    }
+    const [patientRows] = await pool.execute(
+      'SELECT id FROM patients WHERE email = ? AND deleted_at IS NULL',
+      [patient_email]
+    );
     if (patientRows.length === 0) {
       return res.status(404).json({ message: 'Patient non trouvé avec cet email' });
     }
     const patient_id = patientRows[0].id;
 
-    // 3. Calculate date_heure_fin — parse as LOCAL time (avoid UTC shift from toISOString)
+    // 3. Calculer date_heure_fin
     const parsedDuree = parseInt(duree) || 30;
-    // date_heure arrives as 'YYYY-MM-DDTHH:mm:ss' or 'YYYY-MM-DDTHH:mm'
-    // new Date('YYYY-MM-DDTHH:mm') is parsed as LOCAL time in Node.js
     const startDate = new Date(date_heure);
-    const endDate   = new Date(startDate.getTime() + parsedDuree * 60000);
+    const endDate = new Date(startDate.getTime() + parsedDuree * 60000);
     const date_heure_debut = toLocalSQLString(startDate);
-    const date_heure_fin   = toLocalSQLString(endDate);
+    const date_heure_fin = toLocalSQLString(endDate);
 
-    // 4. Prevent overlapping
+    // 4. Vérifier chevauchement
     const [overlap] = await pool.execute(
       `SELECT id FROM rendez_vous
        WHERE medecin_id = ?
@@ -174,14 +222,16 @@ export const createAppointment = async (req, res) => {
       return res.status(409).json({ message: 'Créneau déjà occupé pour ce médecin' });
     }
 
-    // 5. Create appointment
+    // 5. Créer le RDV
     const [result] = await pool.execute(
-      `INSERT INTO rendez_vous (patient_id, medecin_id, secretaire_id, date_heure_debut, date_heure_fin, type_consultation, motif, notes, statut)
+      `INSERT INTO rendez_vous
+        (patient_id, medecin_id, secretaire_id, date_heure_debut, date_heure_fin,
+         type_consultation, motif, notes, statut)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         patient_id,
         mid,
-        req.user.role === 'secretaire' ? req.user.id : null,
+        req.user.role === 'secretaire' ? Number(req.user.id) : null,
         date_heure_debut,
         date_heure_fin,
         type_rdv || 'suivi',
@@ -193,20 +243,23 @@ export const createAppointment = async (req, res) => {
 
     const apptId = result.insertId;
 
-    // 6. Notifications
-    await createNotification(req.user.id, 'appointment_new',
-      'Nouveau rendez-vous', `Le rendez-vous du ${startDate.toLocaleDateString('fr-FR')} a été créé.`,
+    // 6. Notification
+    await safeNotify(
+      req.user.id,
+      'rappel_rdv',
+      'Nouveau rendez-vous',
+      `Rendez-vous créé pour le ${startDate.toLocaleDateString('fr-FR')}`,
       { appointment_id: apptId }
     );
 
     const [rdv] = await pool.execute('SELECT * FROM rendez_vous WHERE id = ?', [apptId]);
-    res.status(201).json({ 
+    res.status(201).json({
       appointment: {
         ...rdv[0],
         date_heure: rdv[0].date_heure_debut,
         statut: 'pending'
-      }, 
-      message: 'Rendez-vous créé avec succès' 
+      },
+      message: 'Rendez-vous créé avec succès'
     });
   } catch (err) {
     console.error('createAppointment error:', err);
@@ -220,10 +273,10 @@ export const updateAppointment = async (req, res) => {
   const { date_heure, duree, type_rdv, motif, notes, statut } = req.body;
 
   try {
-    const [rows] = await pool.execute('SELECT * FROM rendez_vous WHERE id = ?', [id]);
+    const [rows] = await pool.execute('SELECT * FROM rendez_vous WHERE id = ?', [Number(id)]);
     if (!rows.length) return res.status(404).json({ message: 'Rendez-vous introuvable' });
 
-    const rdv  = rows[0];
+    const rdv = rows[0];
     const dbStatut = statut ? mapStatusToDb(statut) : null;
 
     let date_heure_fin = rdv.date_heure_fin;
@@ -243,35 +296,48 @@ export const updateAppointment = async (req, res) => {
          notes             = COALESCE(?, notes),
          statut            = COALESCE(?, statut)
        WHERE id = ?`,
-      [date_heure || null, date_heure_fin || null, type_rdv || null, motif || null, notes || null,
-       dbStatut || null, id]
+      [
+        date_heure || null,
+        date_heure_fin || null,
+        type_rdv || null,
+        motif || null,
+        notes || null,
+        dbStatut || null,
+        Number(id)
+      ]
     );
 
-    // Notify on status change
+    // Notification changement statut
     if (dbStatut && dbStatut !== rdv.statut) {
-      const typeMap = {
-        confirme:  'appointment_confirmed',
-        annule:  'appointment_cancelled',
-        termine:  'appointment_completed',
-      };
-      if (typeMap[dbStatut]) {
-        const label = { confirme:'confirmé', annule:'annulé', termine:'terminé' }[dbStatut];
-        await createNotification(req.user.id, typeMap[dbStatut],
-          `Rendez-vous ${label}`,
-          `Votre rendez-vous a été ${label}.`,
-          { appointment_id: id }
-        );
-      }
+      const notifType = {
+        confirme: 'confirmation_rdv',
+        annule:   'annulation_rdv',
+        termine:  'alerte_systeme',
+      }[dbStatut] || 'alerte_systeme';
+
+      const label = {
+        confirme: 'confirmé',
+        annule:   'annulé',
+        termine:  'terminé'
+      }[dbStatut] || 'mis à jour';
+
+      await safeNotify(
+        req.user.id,
+        notifType,
+        `Rendez-vous ${label}`,
+        `Votre rendez-vous a été ${label}.`,
+        { appointment_id: id }
+      );
     }
 
-    const [updated] = await pool.execute('SELECT * FROM rendez_vous WHERE id = ?', [id]);
-    res.json({ 
+    const [updated] = await pool.execute('SELECT * FROM rendez_vous WHERE id = ?', [Number(id)]);
+    res.json({
       appointment: {
         ...updated[0],
         date_heure: updated[0].date_heure_debut,
         statut: mapStatusToClient(updated[0].statut)
-      }, 
-      message: 'Rendez-vous mis à jour' 
+      },
+      message: 'Rendez-vous mis à jour'
     });
   } catch (err) {
     console.error('updateAppointment error:', err);
@@ -283,25 +349,35 @@ export const updateAppointment = async (req, res) => {
 export const deleteAppointment = async (req, res) => {
   const { id } = req.params;
   try {
-    const [rows] = await pool.execute('SELECT * FROM rendez_vous WHERE id = ?', [id]);
+    const [rows] = await pool.execute('SELECT * FROM rendez_vous WHERE id = ?', [Number(id)]);
     if (!rows.length) return res.status(404).json({ message: 'Rendez-vous introuvable' });
-    await pool.execute('DELETE FROM rendez_vous WHERE id = ?', [id]);
+    await pool.execute('DELETE FROM rendez_vous WHERE id = ?', [Number(id)]);
     res.json({ message: 'Rendez-vous supprimé' });
   } catch (err) {
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
 
-// ─── Upcoming appointments (for dashboard) ────────────────
+// ─── Upcoming appointments ─────────────────────────────────
 export const getUpcoming = async (req, res) => {
   const { role, id } = req.user;
   try {
     let where = "WHERE r.date_heure_debut >= NOW() AND r.statut IN ('planifie','confirme')";
     const params = [];
 
-    if (role === 'medecin') { 
-      where += ' AND m.utilisateur_id = ?'; 
-      params.push(id); 
+    if (role === 'medecin') {
+      where += ' AND m.utilisateur_id = ?';
+      params.push(Number(id));
+    } else if (role === 'secretaire') {
+      const [userRows] = await pool.execute(
+        'SELECT assigned_doctor_id FROM utilisateurs WHERE id = ?',
+        [Number(id)]
+      );
+      const doctorId = userRows[0]?.assigned_doctor_id;
+      if (doctorId) {
+        where += ' AND m.utilisateur_id = ?';
+        params.push(Number(doctorId));
+      }
     } else if (role === 'patient') {
       where += ' AND p.email = ?';
       params.push(req.user.email);
@@ -320,7 +396,7 @@ export const getUpcoming = async (req, res) => {
        ORDER BY r.date_heure_debut ASC LIMIT 10`,
       params
     );
-    
+
     const appointments = rows.map(r => ({
       ...r,
       statut: mapStatusToClient(r.statut),
@@ -334,21 +410,27 @@ export const getUpcoming = async (req, res) => {
   }
 };
 
-// ─── Available slots for a doctor ─────────────────────────
+// ─── Available slots ───────────────────────────────────────
 export const getAvailableSlots = async (req, res) => {
   const { medecin_id: utilisateur_id, date } = req.query;
-  if (!utilisateur_id || !date) return res.status(400).json({ message: 'medecin_id et date requis' });
+  if (!utilisateur_id || !date) {
+    return res.status(400).json({ message: 'medecin_id et date requis' });
+  }
 
   try {
-    const [medecinRows] = await pool.execute('SELECT id FROM medecins WHERE utilisateur_id = ?', [utilisateur_id]);
-    if (medecinRows.length === 0) return res.status(404).json({ message: 'Médecin non trouvé' });
+    const [medecinRows] = await pool.execute(
+      'SELECT id FROM medecins WHERE utilisateur_id = ?',
+      [Number(utilisateur_id)]
+    );
+    if (medecinRows.length === 0) {
+      return res.status(404).json({ message: 'Médecin non trouvé' });
+    }
     const mid = medecinRows[0].id;
 
     const slots = [];
-    const start = 8, end = 18;
-    for (let h = start; h < end; h++) {
+    for (let h = 8; h < 18; h++) {
       for (const m of [0, 30]) {
-        slots.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+        slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
       }
     }
 
@@ -360,6 +442,7 @@ export const getAvailableSlots = async (req, res) => {
     );
     const takenSet = new Set(taken.map(r => r.heure));
     const available = slots.filter(s => !takenSet.has(s));
+
     res.json({ slots: available });
   } catch (err) {
     res.status(500).json({ message: 'Erreur serveur' });
