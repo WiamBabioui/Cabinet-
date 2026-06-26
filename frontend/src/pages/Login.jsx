@@ -68,6 +68,8 @@ const Login = () => {
         <motion.div 
           initial={{ opacity: 0, scale: 0.95, y: -10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
+          data-cy="error-message"
+          role="alert"
           className="flex items-center gap-3 p-4 mb-8 bg-coral/5 border border-coral/20 rounded-2xl text-coral text-sm font-semibold"
         >
           <div className="w-8 h-8 bg-coral/10 rounded-full flex items-center justify-center flex-shrink-0">
@@ -80,6 +82,7 @@ const Login = () => {
       <form onSubmit={handleLogin} className="space-y-5">
         <Input
           id="login-email"
+          data-cy="email-input"
           label={t('auth.login.email_label')}
           icon={Mail}
           type="email"
@@ -92,6 +95,7 @@ const Login = () => {
         <div className="relative group">
           <Input
             id="login-password"
+            data-cy="password-input"
             label={t('auth.login.password_label')}
             icon={Lock}
             type={showPassword ? "text" : "password"}
@@ -132,6 +136,7 @@ const Login = () => {
         <div className="pt-2">
           <Button 
             type="submit" 
+            data-cy="login-submit"
             className="w-full h-14 uppercase tracking-widest font-black text-xs" 
             size="lg"
             isLoading={loading} 

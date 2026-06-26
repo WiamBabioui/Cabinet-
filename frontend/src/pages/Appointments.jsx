@@ -147,6 +147,7 @@ const Appointments = () => {
           <div className="flex gap-4 items-center">
             {(user?.role === 'medecin' || user?.role === 'secretaire') && (
               <motion.button
+                data-cy="new-appointment-btn"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => { setModalInitialTime('09:00'); setIsModalOpen(true); }}
@@ -174,7 +175,7 @@ const Appointments = () => {
         </div>
 
         {/* Week Selector */}
-        <div className="grid grid-cols-7 gap-3 sm:gap-4">
+        <div data-cy="date-filter" className="grid grid-cols-7 gap-3 sm:gap-4">
           {days.map((d, i) => (
             <motion.button 
               key={d.fullDate}
@@ -203,7 +204,7 @@ const Appointments = () => {
         </div>
 
         {/* Timeline */}
-        <div className="glass-card p-0 border border-white/60 min-h-[600px] relative overflow-hidden">
+        <div data-cy="appointments-list" className="glass-card p-0 border border-white/60 min-h-[600px] relative overflow-hidden">
           {/* Subtle noise and gradient */}
           <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
           

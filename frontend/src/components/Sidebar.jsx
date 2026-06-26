@@ -82,7 +82,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onMobileClose }) =
   return (
     <>
       {/* ── Desktop Sidebar (lg+): fixed, always visible ── */}
-      <aside className={twMerge(
+      <aside data-cy="sidebar" className={twMerge(
         "hidden lg:flex fixed top-4 bottom-4 transition-all duration-500 ease-in-out z-50 flex-col rounded-3xl overflow-hidden glass-sidebar",
         isRtl ? 'right-4' : 'left-4',
         isCollapsed ? 'w-20' : 'w-72'
@@ -277,6 +277,7 @@ const SidebarProfile = ({ displayUser, isCollapsed, userRole, t, handleLogout })
       )}
 
       <button
+        data-cy="logout-button"
         onClick={handleLogout}
         className={twMerge(
           "w-full flex items-center gap-3 mt-4 p-3 text-coral hover:bg-coral/10 rounded-2xl transition-all font-bold text-xs uppercase tracking-widest group",

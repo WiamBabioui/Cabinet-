@@ -75,7 +75,9 @@ const PrivateRoute = ({ children, allowedRoles }) => {
     return () => clearInterval(interval);
   }, [user, socket]);
 
-  if (loading) {
+  // While AuthContext is initializing (or token exists but fetch is pending), show spinner
+  const hasToken = !!localStorage.getItem('cabinet_token');
+  if (loading || (hasToken && !user)) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />

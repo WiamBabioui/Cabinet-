@@ -28,6 +28,16 @@ export const initSocket = (httpServer) => {
 };
 
 export const getSocket = () => {
-  if (!io) throw new Error('Socket.io non initialisé !');
+  if (!io) {
+    if (process.env.NODE_ENV === 'test') {
+      return {
+        to: () => ({
+          emit: () => true
+        }),
+        emit: () => true
+      };
+    }
+    throw new Error('Socket.io non initialisé !');
+  }
   return io;
 };

@@ -27,7 +27,7 @@ export const getPatients = async (req, res) => {
 
     // ✅ Filtre par médecin selon le rôle
     if (role === 'medecin') {
-      whereClause += ` AND p.assigned_doctor_id = ?`;
+      whereClause += ` AND p.medecin_traitant_id = (SELECT id FROM medecins WHERE utilisateur_id = ?)`;
       params.push(Number(id));
     } else if (role === 'secretaire') {
       const [userRows] = await pool.execute(
@@ -36,7 +36,7 @@ export const getPatients = async (req, res) => {
       );
       const doctorId = userRows[0]?.assigned_doctor_id;
       if (doctorId) {
-        whereClause += ` AND p.assigned_doctor_id = ?`;
+        whereClause += ` AND p.medecin_traitant_id = (SELECT id FROM medecins WHERE utilisateur_id = ?)`;
         params.push(Number(doctorId));
       } else {
         return res.json({ patients: [], pagination: { total: 0, page, limit, pages: 0 } });
@@ -104,31 +104,42 @@ export const createPatient = async (req, res) => {
     const num_dossier = generateNumDossier();
     const uuid = crypto.randomUUID();
 
-    // ✅ Trouver le médecin assigné automatiquement
-    let doctorId = null;
-    if (role === 'medecin') {
-      doctorId = Number(id);
-    } else if (role === 'secretaire') {
-      const [userRows] = await pool.execute(
-        'SELECT assigned_doctor_id FROM utilisateurs WHERE id = ?',
-        [Number(id)]
-      );
-      doctorId = userRows[0]?.assigned_doctor_id || null;
+    // ✅ Trouver le médecin assigné automatiquement (les tables utilisent medecin_traitant_id pointing to medecins.id)
+    let medecinTraitantId = medecin_traitant_id ? Number(medecin_traitant_id) : null;
+    if (!medecinTraitantId) {
+      let doctorUserId = null;
+      if (role === 'medecin') {
+        doctorUserId = Number(id);
+      } else if (role === 'secretaire') {
+        const [userRows] = await pool.execute(
+          'SELECT assigned_doctor_id FROM utilisateurs WHERE id = ?',
+          [Number(id)]
+        );
+        doctorUserId = userRows[0]?.assigned_doctor_id || null;
+      }
+
+      if (doctorUserId) {
+        const [medecinRows] = await pool.execute(
+          'SELECT id FROM medecins WHERE utilisateur_id = ?',
+          [doctorUserId]
+        );
+        medecinTraitantId = medecinRows[0]?.id || null;
+      }
     }
 
     const sql = `INSERT INTO patients
         (uuid, num_dossier, prenom, nom, date_naissance, sexe, telephone, email, cin,
          adresse_rue, adresse_ville, adresse_code_postal, adresse_pays,
          groupe_sanguin, assurance_nom, assurance_numero,
-         medecin_traitant_id, assigned_doctor_id, notes_admin, statut)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+         medecin_traitant_id, notes_admin, statut)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
     const [result] = await pool.execute(sql, [
       uuid, num_dossier, prenom, nom, date_naissance, sexe, telephone,
       email || null, cin || null, adresse_rue || null, adresse_ville || null,
       adresse_code_postal || null, adresse_pays || 'Maroc',
       groupe_sanguin || null, assurance_nom || null, assurance_numero || null,
-      medecin_traitant_id || null, doctorId, notes_admin || null, 'actif'
+      medecinTraitantId, notes_admin || null, 'actif'
     ]);
 
     const patientId = result.insertId;
@@ -365,13 +376,13 @@ export const getPortalData = async (req, res) => {
             (uuid, num_dossier, prenom, nom, date_naissance, sexe, telephone, email, cin,
              adresse_rue, adresse_ville, adresse_code_postal, adresse_pays,
              groupe_sanguin, assurance_nom, assurance_numero,
-             medecin_traitant_id, assigned_doctor_id, notes_admin, statut)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+             medecin_traitant_id, notes_admin, statut)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
         const [result] = await pool.execute(sql, [
           uuid, num_dossier, u.prenom, u.nom, null, 'M', u.telephone || null,
           email, null, null, null, null, 'Maroc',
-          null, null, null, medecinTraitantId, u.assigned_doctor_id || null, null, 'actif'
+          null, null, null, medecinTraitantId, null, 'actif'
         ]);
 
         const patientId = result.insertId;

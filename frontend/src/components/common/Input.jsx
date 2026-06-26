@@ -11,6 +11,7 @@ const Input = ({
   containerClassName,
   id,
   name,
+  'data-cy': dataCy,
   ...props 
 }) => {
   const generatedId = useId();
@@ -28,6 +29,7 @@ const Input = ({
         <input
           id={inputId}
           name={inputName}
+          data-cy={dataCy}
           placeholder=" "
           className={twMerge(
             'peer w-full bg-white/50 border border-slate-200/50 rounded-2xl px-5 pt-10 pb-3 outline-none transition-all duration-300 font-medium text-slate-700',

@@ -102,7 +102,11 @@ export const signup = async (req, res) => {
 
 // ─── CONNEXION ────────────────────────────────────────────────────────────────
 export const login = async (req, res) => {
-  const { email, mot_de_passe } = req.body;
+  const { email, mot_de_passe } = req.body || {};
+
+  if (!email || !mot_de_passe) {
+    return res.status(400).json({ message: 'Email et mot de passe requis' });
+  }
 
   try {
     const [rows] = await pool.execute(

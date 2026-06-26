@@ -44,7 +44,7 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !error.config?.url?.includes('/auth/login')) {
       localStorage.removeItem('cabinet_token');
       localStorage.removeItem('cabinet_user');
       window.location.href = '/auth/login';

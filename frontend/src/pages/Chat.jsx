@@ -400,7 +400,7 @@ const Chat = () => {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="h-[calc(100vh-100px)] sm:h-[calc(100vh-140px)] flex gap-4 sm:gap-8 overflow-hidden pb-2 sm:pb-4">
+    <div data-cy="chat-page" className="h-[calc(100vh-100px)] sm:h-[calc(100vh-140px)] flex gap-4 sm:gap-8 overflow-hidden pb-2 sm:pb-4">
 
       {/* ════════════════════════════════════ SIDEBAR ════════════════════════════════════ */}
       {/* On mobile: show sidebar only when no contact is active. On md+: always show */}
@@ -451,6 +451,7 @@ const Chat = () => {
           {!sidebarError && filteredItems.map((item, i) => (
             <motion.button
               key={item.id}
+              data-cy="contact-item"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.04 }}
@@ -648,7 +649,7 @@ const Chat = () => {
               </div>
 
               {/* Messages area */}
-              <div className="flex-1 p-4 sm:p-8 overflow-y-auto custom-scrollbar space-y-6 sm:space-y-8 bg-gradient-to-b from-transparent to-purple/[0.02]">
+              <div data-cy="messages-area" className="flex-1 p-4 sm:p-8 overflow-y-auto custom-scrollbar space-y-6 sm:space-y-8 bg-gradient-to-b from-transparent to-purple/[0.02]">
                 {loadingMessages ? (
                   <div className="flex flex-col items-center justify-center py-20 gap-4">
                     <Loader2 className="animate-spin text-purple" size={32} />
@@ -758,6 +759,7 @@ const Chat = () => {
                   </div>
                   <input
                     type="text"
+                    data-cy="message-input"
                     placeholder={t('chat.placeholder') || 'Écrire un message...'}
                     className="flex-1 bg-transparent border-none outline-none text-sm font-medium p-2 placeholder:text-slate-300"
                     value={message}
@@ -774,6 +776,7 @@ const Chat = () => {
                       whileHover={{ scale: 1.05, rotate: -10 }}
                       whileTap={{ scale: 0.95 }}
                       type="submit"
+                      data-cy="send-btn"
                       disabled={!message.trim()}
                       className="bg-gradient-to-br from-purple to-indigo text-white rounded-[1.25rem] h-12 w-12 flex items-center justify-center shadow-glow disabled:opacity-30 disabled:grayscale transition-all"
                     >

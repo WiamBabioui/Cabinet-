@@ -10,6 +10,7 @@ const Button = ({
   className, 
   isLoading, 
   icon: Icon,
+  'data-cy': dataCy,
   ...props 
 }) => {
   const variants = {
@@ -31,6 +32,7 @@ const Button = ({
     <motion.button
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.95 }}
+      data-cy={dataCy}
       className={twMerge(
         'inline-flex items-center justify-center gap-2 font-semibold transition-all duration-300 ease-out disabled:opacity-50 disabled:pointer-events-none',
         variants[variant],
