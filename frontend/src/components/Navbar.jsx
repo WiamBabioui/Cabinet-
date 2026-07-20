@@ -433,7 +433,7 @@ const Navbar = ({ onMenuToggle, isMobileMenuOpen }) => {
 
         {/* Language + Profile */}
         <div className="flex items-center gap-1 sm:gap-2">
-          <div className="hidden sm:block">
+          <div>
             <LanguageSwitcher />
           </div>
 

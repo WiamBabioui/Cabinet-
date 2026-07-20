@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 const Card = ({ children, title, subtitle, icon: Icon, className, headerAction }) => {
   return (
     <motion.div 
-      whileHover={{ y: -4, boxShadow: '0 20px 40px -8px rgba(124,92,255,0.12)' }}
+      whileHover={{ y: -4, boxShadow: '0 20px 40px -8px rgba(14, 108, 104, 0.08)' }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
       className={twMerge('glass-card p-6 overflow-hidden', className)}
     >

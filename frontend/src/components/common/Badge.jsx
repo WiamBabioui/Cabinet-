@@ -23,7 +23,7 @@ const Badge = ({ children, variant = 'info', className }) => {
 
   return (
     <span className={twMerge(
-      'px-3 py-1 rounded-full text-[11px] font-bold border uppercase tracking-wider inline-flex items-center gap-1.5 backdrop-blur-sm',
+      'px-3 py-1 rounded-[0.5rem_0.15rem_0.5rem_0.15rem] text-[11px] font-bold border uppercase tracking-wider inline-flex items-center gap-1.5 backdrop-blur-sm',
       variants[variant] || variants.info,
       className
     )}>

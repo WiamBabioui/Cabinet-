@@ -81,7 +81,7 @@ const AddPatientModal = ({ onClose, onSuccess }) => {
                       onClick={() => setForm({ ...form, sexe: s })}
                       className={`py-3.5 rounded-2xl text-sm font-bold border transition-all ${
                         form.sexe === s 
-                          ? 'bg-gradient-to-br from-purple to-[#9b82ff] border-transparent text-white shadow-glow' 
+                          ? 'bg-purple border-transparent text-white shadow-soft' 
                           : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-white hover:border-purple/30 hover:text-purple'
                       }`}
                     >
@@ -387,7 +387,7 @@ const Patients = () => {
                         onClick={() => fetchPatients(i + 1, searchTerm)}
                         className={`w-12 h-12 flex items-center justify-center rounded-2xl font-black text-sm transition-all ${
                           pagination.page === i + 1 
-                            ? 'bg-gradient-to-br from-purple to-[#9b82ff] text-white shadow-glow border-none' 
+                            ? 'bg-purple text-white shadow-soft border-none' 
                             : 'bg-white border border-slate-100 text-slate-400 hover:bg-slate-50'
                         }`}
                       >

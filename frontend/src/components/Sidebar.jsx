@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { twMerge } from 'tailwind-merge';
+import Logo from './common/Logo';
 
 const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onMobileClose }) => {
   const { user, logout } = useAuth();
@@ -89,32 +90,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onMobileClose }) =
       )}>
         {/* Logo */}
         <div className="p-6 flex items-center justify-between overflow-hidden relative">
-          <AnimatePresence mode="wait">
-            {!isCollapsed && (
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="flex items-center gap-3 z-10"
-              >
-                <div className="w-10 h-10 bg-gradient-to-tr from-purple to-mint rounded-2xl flex items-center justify-center text-indigo shadow-glow-emerald">
-                  <HeartPulse size={22} strokeWidth={2.5} />
-                </div>
-                <span className="font-black text-2xl text-slate-800 dark:text-white tracking-tighter">
-                  Cabinet<span className="text-purple">+</span>
-                </span>
-              </motion.div>
-            )}
-            {isCollapsed && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="w-10 h-10 bg-gradient-to-tr from-purple to-mint text-indigo rounded-2xl flex items-center justify-center mx-auto shadow-glow-emerald z-10"
-              >
-                <HeartPulse size={22} strokeWidth={2.5} />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <Logo size="md" showText={!isCollapsed} />
         </div>
 
         {/* Collapse Toggle */}
@@ -157,14 +133,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onMobileClose }) =
           >
             {/* Mobile Header with Close */}
             <div className="p-5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-tr from-purple to-mint rounded-2xl flex items-center justify-center text-indigo shadow-glow-emerald">
-                  <HeartPulse size={22} strokeWidth={2.5} />
-                </div>
-                <span className="font-black text-xl text-slate-800 tracking-tighter">
-                  Cabinet<span className="text-purple">+</span>
-                </span>
-              </div>
+              <Logo size="md" showText={true} />
               <button
                 onClick={onMobileClose}
                 className="w-10 h-10 flex items-center justify-center rounded-2xl hover:bg-slate-100/50 text-slate-400 hover:text-slate-700 transition-all"
@@ -213,7 +182,7 @@ const SidebarNav = ({ filteredLinks, isCollapsed, t, onNavClick }) => (
             {isActive && (
               <motion.div
                 layoutId="sidebar-active-bg"
-                className="absolute inset-0 bg-gradient-to-r from-purple to-[#9b82ff] rounded-2xl"
+                className="absolute inset-0 bg-purple rounded-2xl"
                 initial={false}
                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
               />
@@ -243,7 +212,7 @@ const SidebarProfile = ({ displayUser, isCollapsed, userRole, t, handleLogout })
     )}>
       {!isCollapsed ? (
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-tr from-coral to-gold rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-glow flex-shrink-0 hover:scale-110 transition-transform cursor-pointer overflow-hidden">
+          <div className="w-12 h-12 bg-mint text-purple border border-purple/10 rounded-2xl flex items-center justify-center font-serif font-black text-sm shadow-soft flex-shrink-0 hover:scale-110 transition-transform cursor-pointer overflow-hidden">
             {displayUser.photo_url ? (
               <img src={displayUser.photo_url} alt="" className="w-full h-full object-cover" />
             ) : (
@@ -267,7 +236,7 @@ const SidebarProfile = ({ displayUser, isCollapsed, userRole, t, handleLogout })
           </div>
         </div>
       ) : (
-        <div className="w-10 h-10 bg-gradient-to-tr from-coral to-gold rounded-xl flex items-center justify-center text-white font-black text-xs shadow-glow cursor-pointer overflow-hidden">
+        <div className="w-10 h-10 bg-mint text-purple border border-purple/10 rounded-xl flex items-center justify-center font-serif font-black text-xs shadow-soft cursor-pointer overflow-hidden">
           {displayUser.photo_url ? (
             <img src={displayUser.photo_url} alt="" className="w-full h-full object-cover" />
           ) : (

@@ -4,13 +4,14 @@ import pool from '../config/db.mysql.js';
 export const getDashboardStats = async (req, res) => {
   try {
     const { role, id } = req.user;
+    const userRole = role?.toLowerCase().trim();
 
-    // ─── Trouver le doctorId selon le rôle ───────────────────
+    // ─── Trouver le doctorId (utilisateurs.id) selon le rôle ───────────────────
     let doctorId = null;
 
-    if (role === 'medecin') {
+    if (userRole === 'medecin') {
       doctorId = Number(id);
-    } else if (role === 'secretaire') {
+    } else if (userRole === 'secretaire') {
       const [userRows] = await pool.execute(
         'SELECT assigned_doctor_id FROM utilisateurs WHERE id = ?',
         [Number(id)]
@@ -18,9 +19,24 @@ export const getDashboardStats = async (req, res) => {
       doctorId = userRows[0]?.assigned_doctor_id || null;
     }
 
+    // ─── Trouver le medecinDbId (medecins.id) pour filtrer les rendez-vous ─────
+    let medecinDbId = null;
+    if (doctorId) {
+      const [medecinRows] = await pool.execute(
+        'SELECT id FROM medecins WHERE utilisateur_id = ?',
+        [Number(doctorId)]
+      );
+      medecinDbId = medecinRows[0]?.id || null;
+    }
+
     // ─── Filtre patients ──────────────────────────────────────
     const patientFilter = doctorId
-      ? `AND assigned_doctor_id = ${Number(doctorId)}`
+      ? `AND medecin_traitant_id = ${Number(doctorId)}`
+      : '';
+
+    // ─── Filtre rendez-vous ───────────────────────────────────
+    const appointmentFilter = medecinDbId
+      ? `AND medecin_id = ${Number(medecinDbId)}`
       : '';
 
     // Total patients actifs
@@ -51,13 +67,14 @@ export const getDashboardStats = async (req, res) => {
     const [[{ rdv_aujourd_hui }]] = await pool.execute(
       `SELECT COUNT(*) as rdv_aujourd_hui FROM rendez_vous
        WHERE DATE(date_heure_debut) = CURDATE()
-       AND statut NOT IN ('annule', 'absent')`
+       AND statut NOT IN ('annule', 'absent') ${appointmentFilter}`
     );
 
     // RDV ce mois par statut
     const [rdv_par_statut] = await pool.execute(
       `SELECT statut, COUNT(*) as total FROM rendez_vous
        WHERE MONTH(date_heure_debut) = MONTH(NOW())
+       ${appointmentFilter}
        GROUP BY statut`
     );
 
@@ -81,28 +98,69 @@ export const getDashboardStats = async (req, res) => {
        GROUP BY sexe`
     );
 
-    res.json({
+    res.status(200).json({
       stats: {
-        total_patients,
-        total_users,
-        total_medecins,
-        nouveaux_patients,
-        rdv_aujourd_hui,
+        total_patients: total_patients ?? 0,
+        total_users: total_users ?? 0,
+        total_medecins: total_medecins ?? 0,
+        nouveaux_patients: nouveaux_patients ?? 0,
+        rdv_aujourd_hui: rdv_aujourd_hui ?? 0,
       },
-      rdv_par_statut,
-      patients_par_mois,
-      repartition_sexe,
+      rdv_par_statut: rdv_par_statut || [],
+      patients_par_mois: patients_par_mois || [],
+      repartition_sexe: repartition_sexe || [],
     });
 
   } catch (err) {
     console.error('getDashboardStats error:', err);
-    res.status(500).json({ message: 'Erreur serveur' });
+    res.status(200).json({
+      stats: {
+        total_patients: 0,
+        total_users: 0,
+        total_medecins: 0,
+        nouveaux_patients: 0,
+        rdv_aujourd_hui: 0,
+      },
+      rdv_par_statut: [],
+      patients_par_mois: [],
+      repartition_sexe: [],
+    });
   }
 };
 
 // ✅ RDV du jour pour le dashboard
 export const getRdvAujourdhui = async (req, res) => {
   try {
+    const { role, id } = req.user;
+    const userRole = role?.toLowerCase().trim();
+    let doctorId = null;
+
+    if (userRole === 'medecin') {
+      doctorId = Number(id);
+    } else if (userRole === 'secretaire') {
+      const [userRows] = await pool.execute(
+        'SELECT assigned_doctor_id FROM utilisateurs WHERE id = ?',
+        [Number(id)]
+      );
+      doctorId = userRows[0]?.assigned_doctor_id || null;
+    }
+
+    let medecinDbId = null;
+    if (doctorId) {
+      const [medecinRows] = await pool.execute(
+        'SELECT id FROM medecins WHERE utilisateur_id = ?',
+        [Number(doctorId)]
+      );
+      medecinDbId = medecinRows[0]?.id || null;
+    }
+
+    const queryParams = [];
+    let appointmentFilter = '';
+    if (medecinDbId) {
+      appointmentFilter = 'AND rv.medecin_id = ?';
+      queryParams.push(Number(medecinDbId));
+    }
+
     const [rdv] = await pool.execute(
       `SELECT rv.id, rv.date_heure_debut, rv.date_heure_fin, rv.motif,
               rv.type_consultation, rv.statut,
@@ -111,13 +169,15 @@ export const getRdvAujourdhui = async (req, res) => {
        FROM rendez_vous rv
        JOIN patients p ON p.id = rv.patient_id
        WHERE DATE(rv.date_heure_debut) = CURDATE()
-       ORDER BY rv.date_heure_debut ASC`
+       ${appointmentFilter}
+       ORDER BY rv.date_heure_debut ASC`,
+      queryParams
     );
 
-    res.json({ rdv });
+    res.status(200).json({ rdv });
 
   } catch (err) {
     console.error('getRdvAujourdhui error:', err);
-    res.status(500).json({ message: 'Erreur serveur' });
+    res.status(200).json({ rdv: [] });
   }
 };

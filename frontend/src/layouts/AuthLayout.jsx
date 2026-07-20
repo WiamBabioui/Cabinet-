@@ -3,13 +3,22 @@ import { Outlet } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../components/common/LanguageSwitcher';
+import Logo from '../components/common/Logo';
 import { ShieldCheck, Sparkles, HeartPulse, Zap, Activity } from 'lucide-react';
 
-// Floating animated orb
-const Orb = ({ className, delay = 0 }) => (
+// Floating animated organic blob
+const Blob = ({ className, delay = 0 }) => (
   <motion.div
-    animate={{ y: [0, -20, 0], scale: [1, 1.05, 1] }}
-    transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', delay }}
+    animate={{ 
+      y: [0, -25, 0], 
+      scale: [1, 1.08, 1],
+      borderRadius: [
+        "42% 58% 70% 30% / 45% 45% 55% 55%",
+        "70% 30% 52% 48% / 60% 40% 60% 40%",
+        "42% 58% 70% 30% / 45% 45% 55% 55%"
+      ]
+    }}
+    transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut', delay }}
     className={className}
   />
 );
@@ -21,48 +30,43 @@ const AuthLayout = () => {
   const features = [
     { icon: Activity, label: t('auth.layout.feat_ehr'), color: 'text-coral' },
     { icon: Zap, label: t('auth.layout.feat_sync'), color: 'text-mint' },
-    
     { icon: HeartPulse, label: t('auth.layout.feat_continuity'), color: 'text-purple' },
   ];
 
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 lg:p-10 relative overflow-hidden font-sans bg-[#0f1123]`} dir={isRtl ? 'rtl' : 'ltr'}>
-      {/* Mesh gradient background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <Orb delay={0} className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-purple/20 rounded-full blur-[100px]" />
-        <Orb delay={2} className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-emerald/15 rounded-full blur-[100px]" />
-        <Orb delay={4} className="absolute top-[40%] left-[40%] w-[30%] h-[30%] bg-coral/10 rounded-full blur-[80px]" />
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 lg:p-10 relative font-sans bg-[#091514] w-full overflow-y-auto" dir={isRtl ? 'rtl' : 'ltr'}>
+      {/* Organic blob background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <Blob delay={0} className="absolute top-[-10%] left-[-5%] w-[55%] h-[55%] bg-purple/10 blur-[90px]" />
+        <Blob delay={2.5} className="absolute bottom-[-10%] right-[-5%] w-[45%] h-[45%] bg-emerald/10 blur-[90px]" />
+        <Blob delay={5} className="absolute top-[35%] left-[35%] w-[25%] h-[25%] bg-coral/5 blur-[70px]" />
       </div>
+
       <motion.div 
-        initial={{ opacity: 0, y: 30, scale: 0.97 }}
+        initial={{ opacity: 0, y: 30, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-        className="w-full max-w-6xl relative z-10 flex rounded-[2.5rem] overflow-hidden min-h-[700px] shadow-[0_0_80px_rgba(124,92,255,0.2)]"
+        className="w-full max-w-6xl relative z-10 flex flex-col lg:flex-row rounded-[2.5rem_1.5rem_3rem_2rem] overflow-hidden min-h-[700px] shadow-[0_20px_50px_rgba(14,108,104,0.12)] border border-white/5 bg-[#132E2C]/30"
       >
-        {/* Left Side: Branding */}
-        <div className={`hidden lg:flex flex-col justify-between gap-10 flex-1 relative overflow-hidden p-16 bg-gradient-to-br from-indigo via-[#1a1f4a] to-[#0f1123] ${isRtl ? 'order-2' : 'order-1'}`}>
-          {/* Decorative inner orbs */}
-          <div className="absolute top-0 right-0 w-80 h-80 bg-purple/20 rounded-full translate-x-1/2 -translate-y-1/3 blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-72 h-72 bg-emerald/15 rounded-full -translate-x-1/3 translate-y-1/3 blur-3xl pointer-events-none" />
+        {/* Left Side: Branding (Asymmetric Width 58%) */}
+        <div className={`hidden lg:flex flex-col justify-between gap-10 lg:w-[58%] flex-shrink-0 relative overflow-hidden p-16 bg-gradient-to-br from-indigo via-[#183936] to-indigo ${isRtl ? 'order-2' : 'order-1'}`}>
+          {/* Decorative inner organic blob */}
+          <div className="absolute top-0 right-0 w-80 h-80 bg-purple/10 rounded-[50%_50%_30%_70%/_50%_60%_40%_50%] translate-x-1/3 -translate-y-1/3 blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-72 h-72 bg-emerald/10 rounded-[30%_70%_70%_30%/_50%_40%_60%_50%] -translate-x-1/3 translate-y-1/3 blur-3xl pointer-events-none" />
           
-          {/* Grid pattern overlay */}
+          {/* Hand-drawn look grid pattern overlay */}
           <div 
-            className="absolute inset-0 opacity-[0.03] pointer-events-none"
-            style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.3) 1px, transparent 1px)', backgroundSize: '40px 40px' }}
+            className="absolute inset-0 opacity-[0.02] pointer-events-none"
+            style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.3) 1px, transparent 1px)', backgroundSize: '50px 50px' }}
           />
 
           {/* Top: Logo */}
           <div className="relative z-10">
             <motion.div 
-              whileHover={{ scale: 1.05 }}
-              className="flex items-center gap-3 mb-12 w-fit"
+              whileHover={{ scale: 1.02 }}
+              className="mb-12 w-fit"
             >
-              <div className="w-12 h-12 bg-gradient-to-br from-purple to-emerald rounded-2xl flex items-center justify-center shadow-glow">
-                <HeartPulse className="text-white" size={26} strokeWidth={2.5} />
-              </div>
-              <span className="text-3xl font-black text-white tracking-tighter">
-                Cabinet<span className="text-emerald">+</span>
-              </span>
+              <Logo size="lg" className="text-white" />
             </motion.div>
             
             <h1 className="text-5xl font-black text-white mb-5 leading-tight tracking-tight">
@@ -72,7 +76,7 @@ const AuthLayout = () => {
               {t('auth.layout.subtitle')}
             </p>
 
-            {/* Feature pills */}
+            {/* Custom tags/labels (not pill shape) */}
             <div className="flex flex-wrap gap-3 mt-10">
               {features.map(({ icon: Icon, label, color }, i) => (
                 <motion.div
@@ -80,7 +84,7 @@ const AuthLayout = () => {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.5 + i * 0.1 }}
-                  className="flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10 text-white/80 text-sm font-semibold"
+                  className="flex items-center gap-2.5 px-5 py-2.5 bg-white/5 backdrop-blur-sm rounded-[0.75rem_0.25rem_0.75rem_0.25rem] border border-white/10 text-white/80 text-xs font-bold uppercase tracking-wider"
                 >
                   <Icon size={15} className={color} />
                   {label}
@@ -94,25 +98,25 @@ const AuthLayout = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6, duration: 0.8 }}
-            className="relative z-10 p-7 bg-white/5 backdrop-blur-lg rounded-3xl border border-white/10"
+            className="relative z-10 p-8 bg-white/[0.03] backdrop-blur-lg rounded-[2rem_1rem_2rem_1rem] border border-white/10"
           >
-            <p className="text-white/80 font-medium italic text-base leading-relaxed mb-5">
+            <p className="text-white/80 font-medium italic text-base leading-relaxed mb-6 font-serif">
               &ldquo;{t('auth.layout.quote')}&rdquo;
             </p>
             <div className="flex items-center gap-4">
-              <div className="w-11 h-11 bg-purple/10 border border-purple/20 rounded-2xl flex items-center justify-center text-purple font-black shadow-glow flex-shrink-0">
+              <div className="w-11 h-11 bg-white/10 border border-white/20 rounded-[12px_6px_12px_8px] flex items-center justify-center text-white font-black text-sm shadow-soft flex-shrink-0">
                 YA
               </div>
               <div>
-                <h4 className="text-white font-black text-sm">{t('auth.layout.quote_author')}</h4>
-                <span className="text-white/40 text-[11px] uppercase font-bold tracking-widest">{t('auth.layout.quote_role')}</span>
+                <h4 className="text-white font-black text-sm leading-none mb-1">{t('auth.layout.quote_author')}</h4>
+                <span className="text-white/40 text-[10px] uppercase font-bold tracking-widest">{t('auth.layout.quote_role')}</span>
               </div>
             </div>
           </motion.div>
         </div>
 
-        {/* Right Side: Auth Form */}
-        <div className={`flex-1 p-8 lg:p-16 flex flex-col bg-white/95 backdrop-blur-xl relative ${isRtl ? 'order-1' : 'order-2'}`}>
+        {/* Right Side: Auth Form (Asymmetric Width 42%) */}
+        <div className={`w-full lg:w-[42%] p-8 lg:p-16 flex flex-col bg-white/95 backdrop-blur-xl relative ${isRtl ? 'order-1' : 'order-2'}`}>
           
           {/* Language Switcher */}
           <div className="flex justify-end mb-6 z-50">
@@ -122,20 +126,17 @@ const AuthLayout = () => {
           <div className="w-full max-w-md mx-auto my-auto flex flex-col justify-center">
             {/* Mobile logo */}
             <div className="flex items-center gap-2.5 mb-10 lg:hidden">
-              <div className="w-9 h-9 bg-gradient-to-br from-purple to-emerald rounded-xl flex items-center justify-center">
-                <HeartPulse className="text-white" size={18} strokeWidth={2.5} />
-              </div>
-              <span className="text-xl font-black text-slate-800">Cabinet<span className="text-purple">+</span></span>
+              <Logo size="sm" className="text-slate-800" />
             </div>
             <Outlet />
           </div>
         </div>
       </motion.div>
 
-      {/* Footer */}
-      <div className="fixed bottom-6 left-1/2 right-0 text-center -translate-x-1/2 text-slate-500 text-[10px] font-black tracking-widest uppercase z-20 text-center w-full">
+      {/* Aligned responsive footer (in flow, not fixed) */}
+      <footer className="mt-8 text-center text-slate-500 text-[10px] font-black tracking-widest uppercase relative z-10 max-w-md mx-auto w-full leading-relaxed px-4">
         &copy; 2026 Cabinet+ &bull; Technologie Médicale Marocaine &bull; {t('common.all_rights_reserved') || 'Tous droits réservés'}
-      </div>
+      </footer>
     </div>
   );
 };

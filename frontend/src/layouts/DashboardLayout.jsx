@@ -69,19 +69,37 @@ const DashboardLayout = () => {
         <div className="main-content flex-1 flex flex-col">
           <Navbar onMenuToggle={() => setIsMobileOpen((v) => !v)} isMobileMenuOpen={isMobileOpen} />
 
-          <main className="p-4 sm:p-6 md:p-8 lg:p-10 flex-1 overflow-x-hidden">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0, y: 20, filter: 'blur(8px)' }}
-                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, y: -20, filter: 'blur(8px)' }}
-                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                className="max-w-[1600px] mx-auto"
-              >
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
+          <main className="p-4 sm:p-6 md:p-8 lg:p-10 flex-1 overflow-x-hidden flex flex-col justify-between">
+            <div className="flex-1 w-full">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={location.pathname}
+                  initial={{ opacity: 0, y: 20, filter: 'blur(8px)' }}
+                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  exit={{ opacity: 0, y: -20, filter: 'blur(8px)' }}
+                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                  className="max-w-[1600px] mx-auto"
+                >
+                  <Outlet />
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* Footer repensé */}
+            <footer className="mt-16 pt-8 border-t border-slate-200/50 dark:border-white/5 text-slate-400 text-xs font-medium w-full max-w-[1600px] mx-auto shrink-0">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center sm:text-left">
+                  &copy; 2026 Cabinet+ &bull; Technologie Médicale Marocaine
+                </span>
+                <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <a href="#" className="hover:text-purple transition-colors">Documentation</a>
+                  <span className="opacity-30 hidden sm:inline">&bull;</span>
+                  <a href="#" className="hover:text-purple transition-colors">Assistance</a>
+                  <span className="opacity-30 hidden sm:inline">&bull;</span>
+                  <span>v1.0.0</span>
+                </div>
+              </div>
+            </footer>
           </main>
         </div>
       </div>

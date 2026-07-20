@@ -310,7 +310,7 @@ const PatientPortal = () => {
 
           {/* Book Appointment CTA */}
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}>
-            <Card className="rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-slate-800 text-white p-10 border-none shadow-glow-purple relative overflow-hidden group">
+            <Card className="rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-slate-800 text-white p-10 border-none shadow-soft relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-64 h-64 bg-purple/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform duration-1000" />
               <div className="relative z-10 flex flex-col items-center text-center">
                 <div className="w-20 h-20 bg-white/10 backdrop-blur-md rounded-3xl flex items-center justify-center text-purple mb-6 shadow-glow border border-white/10 group-hover:rotate-12 transition-all">
@@ -318,7 +318,7 @@ const PatientPortal = () => {
                 </div>
                 <h4 className="text-2xl font-black mb-3 tracking-tight">{t('portal.cta.title')}</h4>
                 <p className="text-sm text-white/50 mb-8 font-medium leading-relaxed">{t('portal.cta.subtitle')}</p>
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full h-14 bg-white text-slate-900 rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-glow hover:shadow-glow-purple transition-all">
+                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full h-14 bg-white text-slate-900 rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-glow hover:shadow-glow transition-all">
                    {t('portal.cta.book')}
                 </motion.button>
               </div>

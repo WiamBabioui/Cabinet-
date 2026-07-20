@@ -240,12 +240,12 @@ const Dashboard = () => {
                 <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#7C5CFF" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#7C5CFF" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#0E6C68" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#0E6C68" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="strokeColor" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#7C5CFF" />
-                      <stop offset="100%" stopColor="#00C9A7" />
+                      <stop offset="0%" stopColor="#0E6C68" />
+                      <stop offset="100%" stopColor="#3F7E76" />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="8 8" vertical={false} stroke="#f1f5f9" />
@@ -270,7 +270,7 @@ const Dashboard = () => {
                       background: 'rgba(255,255,255,0.95)',
                       backdropFilter: 'blur(20px)'
                     }} 
-                    itemStyle={{ fontWeight: 800, fontSize: '14px', color: '#7C5CFF' }}
+                    itemStyle={{ fontWeight: 800, fontSize: '14px', color: '#0E6C68' }}
                     labelStyle={{ fontWeight: 800, fontSize: '12px', marginBottom: '4px', color: '#64748b' }}
                   />
                   <Area 
@@ -391,7 +391,7 @@ const Dashboard = () => {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.05 }}
-                      whileHover={{ backgroundColor: 'rgba(124,92,255,0.03)' }}
+                      whileHover={{ backgroundColor: 'rgba(14, 108, 104, 0.03)' }}
                       className="transition-all group cursor-pointer"
                     >
                       <td className="px-6 py-4">
