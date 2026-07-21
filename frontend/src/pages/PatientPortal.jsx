@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
+
   User, 
   FileText, 
   Download, 
@@ -31,7 +33,9 @@ import { useTranslation } from 'react-i18next';
 import { twMerge } from 'tailwind-merge';
 
 const PatientPortal = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { t, i18n } = useTranslation();
@@ -230,6 +234,7 @@ const PatientPortal = () => {
                     <motion.div 
                       key={consult.id} 
                       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                      onClick={() => navigate('/patient-portal/consultations')}
                       className="flex items-center justify-between p-6 bg-white/40 backdrop-blur-sm border border-white/80 rounded-[2rem] hover:bg-white hover:shadow-soft transition-all cursor-pointer group"
                     >
                       <div className="flex items-center gap-6">
@@ -237,7 +242,7 @@ const PatientPortal = () => {
                           <Activity size={20} strokeWidth={2.5} />
                         </div>
                         <div>
-                          <h5 className="font-black text-slate-800 text-base mb-1">{consult.diagnostic_principal}</h5>
+                          <h5 className="font-black text-slate-800 text-base mb-1">{consult.diagnostic_principal || 'Consultation médicale'}</h5>
                           <div className="flex items-center gap-3">
                              <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.15em]">
                                {t('roles.medecin')}. {consult.medecin_nom}
@@ -250,22 +255,28 @@ const PatientPortal = () => {
                         </div>
                       </div>
                       <motion.button whileHover={{ scale: 1.1, rotate: 10 }} className="w-12 h-12 flex items-center justify-center bg-white shadow-soft rounded-2xl text-slate-300 hover:text-purple transition-colors border border-slate-50">
-                        <Download size={20} strokeWidth={2.5} />
+                        <ArrowRight size={20} strokeWidth={2.5} />
                       </motion.button>
                     </motion.div>
                   ))
                 ) : (
-                  <div className="py-20 text-center opacity-30">
-                     <FileText size={48} className="mx-auto mb-4" />
-                     <p className="text-xs font-black uppercase tracking-widest">{t('portal.history.no_history')}</p>
+                  <div className="py-16 text-center">
+                     <FileText size={48} className="mx-auto mb-4 text-slate-300" />
+                     <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">{t('portal.history.no_history')}</p>
+                     <p className="text-xs text-slate-400">Accédez à votre espace dédié pour consulter l'historique complet.</p>
                   </div>
                 )}
               </div>
-              {consultations.length > 0 && (
-                <Button variant="ghost" className="w-full mt-10 h-14 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-purple/5 text-purple group">
-                  {t('portal.history.view_all')} <ArrowRight size={16} className="ms-2 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              )}
+
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/patient-portal/consultations')}
+                className="w-full mt-8 h-14 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-purple/5 text-purple group"
+              >
+                Mes Consultations <ArrowRight size={16} className="ms-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+
+
             </Card>
           </motion.div>
         </div>

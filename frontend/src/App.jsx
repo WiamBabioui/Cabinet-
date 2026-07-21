@@ -21,7 +21,9 @@ import Appointments       from './pages/Appointments';
 import Consultation       from './pages/Consultation';
 import Chat               from './pages/Chat';
 import PatientPortal      from './pages/PatientPortal';
+import MesConsultations   from './pages/MesConsultations';
 import AssistantDashboard from './pages/AssistantDashboard';
+
 
 // ─── Role-based index redirect ────────────────────────────────────────────────
 // Patients must go to /patient-portal, secretaires to /assistant-dashboard.
@@ -150,6 +152,15 @@ function App() {
             </PrivateRoute>
           }
         />
+        <Route
+          path="patient-portal/consultations"
+          element={
+            <PrivateRoute allowedRoles={['patient']}>
+              <MesConsultations />
+            </PrivateRoute>
+          }
+        />
+
       </Route>
 
       {/* ── Redirection par défaut ── */}

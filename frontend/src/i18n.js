@@ -28,7 +28,9 @@ const resources = {
         "chat": "Messagerie",
         "profile": "Mon Profil",
         "patient_portal": "Mon Espace",
+        "my_consultations": "Mes Consultations",
         "logout": "Déconnexion"
+
       },
       "roles": {
         "medecin": "Médecin",
@@ -432,7 +434,9 @@ const resources = {
         "chat": "Messages",
         "profile": "My Profile",
         "patient_portal": "Patient Portal",
+        "my_consultations": "My Consultations",
         "logout": "Logout"
+
       },
       "roles": {
         "medecin": "Doctor",

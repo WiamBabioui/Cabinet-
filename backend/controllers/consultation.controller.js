@@ -1,4 +1,5 @@
 import Consultation from '../models/Consultation.js';
+import pool from '../config/db.mysql.js';
 
 // ─── GET /api/consultations ───────────────────────────────
 export const getConsultations = async (req, res) => {
@@ -52,28 +53,69 @@ export const getConsultationById = async (req, res) => {
 export const createConsultation = async (req, res) => {
   try {
     const { 
-      patientId, 
-      appointmentId, 
-      consultationType, 
-      symptoms, 
-      diagnosis, 
-      treatment, 
-      prescription, 
-      doctorNotes,
-      consultationDate 
-    } = req.body;
-
-    const newConsultation = new Consultation({
-      patientId: parseInt(patientId),
-      doctorId: req.user.id,
-      appointmentId: appointmentId ? parseInt(appointmentId) : null,
+      patientId,
+      rendez_vous_id,
+      appointmentId,
       consultationType,
       symptoms,
       diagnosis,
       treatment,
       prescription,
       doctorNotes,
-      consultationDate: consultationDate || new Date()
+      consultationDate,
+      // Champs spécifiques au formulaire Consultation.jsx
+      anamnese,
+      examen_clinique,
+      diagnostic_principal,
+      codes_cim10,
+      conduite_a_tenir,
+      ordonnances,
+      // Vitaux
+      poids_kg, taille_cm, tension_sys, tension_dia,
+      temperature, frequence_cardiaque, spo2,
+    } = req.body;
+
+    // ── Résoudre le patientId (ID MySQL table patients) ────────────────────
+    let resolvedPatientId = patientId ? parseInt(patientId) : null;
+    const rvId = rendez_vous_id || appointmentId;
+
+    if (!resolvedPatientId && rvId) {
+      // Chercher dans MySQL le patient_id lié au rendez-vous
+      const [rvRows] = await pool.execute(
+        `SELECT patient_id FROM rendez_vous WHERE id = ? LIMIT 1`,
+        [parseInt(rvId)]
+      );
+      if (rvRows.length > 0) {
+        resolvedPatientId = rvRows[0].patient_id;
+      }
+    }
+
+    if (!resolvedPatientId) {
+      return res.status(400).json({ message: 'patientId introuvable — rendez-vous invalide ?' });
+    }
+
+    // ── Construire le texte de prescription depuis l'array ordonnances ─────
+    let prescriptionText = prescription || '';
+    if (!prescriptionText && ordonnances && ordonnances.length > 0) {
+      prescriptionText = ordonnances
+        .map(m => `${m.medicament} — ${m.posologie}${m.duree ? ` (${m.duree})` : ''}`)
+        .join('\n');
+    }
+
+    // ── Construire les symptômes depuis anamnese / examen_clinique ─────────
+    const symptomsArray = symptoms || (anamnese ? [anamnese] : []);
+
+    const newConsultation = new Consultation({
+      patientId: resolvedPatientId,
+      doctorId: req.user.id,
+      appointmentId: rvId ? parseInt(rvId) : null,
+      consultationType: consultationType || 'Consultation',
+      symptoms: symptomsArray,
+      diagnosis: diagnosis || diagnostic_principal || '',
+      treatment: treatment || conduite_a_tenir || '',
+      prescription: prescriptionText,
+      doctorNotes: doctorNotes || examen_clinique || '',
+      consultationDate: consultationDate || new Date(),
     });
 
     await newConsultation.save();
@@ -83,3 +125,4 @@ export const createConsultation = async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
+

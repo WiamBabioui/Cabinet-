@@ -4,14 +4,17 @@ import {
   Search, Plus, MoreVertical, ExternalLink,
   Phone, Mail, ChevronLeft, ChevronRight,
   Loader2, AlertCircle, X, Filter, Download,
-  UserPlus, Calendar, Activity, Sparkles, Hash, MessageSquare
+  UserPlus, Calendar, Activity, Sparkles, Hash, MessageSquare, Edit
 } from 'lucide-react';
 import Badge from '../components/common/Badge';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
+import EditPatientModal from '../components/common/EditPatientModal';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
+
 
 // ─── Modal Ajout Patient ──────────────────────────────────────────────────────
 const AddPatientModal = ({ onClose, onSuccess }) => {
@@ -132,13 +135,18 @@ const AddPatientModal = ({ onClose, onSuccess }) => {
 // ─── Page Principale ──────────────────────────────────────────────────────────
 const Patients = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { t, i18n } = useTranslation();
-  const [patients, setPatients]     = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showModal, setShowModal]   = useState(false);
-  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
+  const [patients, setPatients]             = useState([]);
+  const [loading, setLoading]               = useState(true);
+  const [error, setError]                   = useState('');
+  const [searchTerm, setSearchTerm]         = useState('');
+  const [showModal, setShowModal]           = useState(false);
+  const [editingPatient, setEditingPatient] = useState(null);
+  const [pagination, setPagination]         = useState({ page: 1, pages: 1, total: 0 });
+
+  const isSecretaireOrAdmin = ['secretaire', 'admin'].includes(user?.role?.toLowerCase());
+
 
   const fetchPatients = useCallback(async (page = 1, search = '') => {
     setLoading(true);
@@ -168,7 +176,15 @@ const Patients = () => {
             onSuccess={() => fetchPatients(1, searchTerm)}
           />
         )}
+        {editingPatient && (
+          <EditPatientModal
+            patient={editingPatient}
+            onClose={() => setEditingPatient(null)}
+            onSuccess={() => fetchPatients(pagination.page, searchTerm)}
+          />
+        )}
       </AnimatePresence>
+
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -313,6 +329,17 @@ const Patients = () => {
                           className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0"
                           onClick={(e) => e.stopPropagation()}
                         >
+                          {isSecretaireOrAdmin && (
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => setEditingPatient(p)}
+                              title="Modifier les infos administratives"
+                              className="w-11 h-11 flex items-center justify-center bg-white shadow-soft rounded-2xl text-slate-400 hover:text-amber-500 hover:shadow-glow transition-all border border-slate-100"
+                            >
+                              <Edit size={18} strokeWidth={2.5} />
+                            </motion.button>
+                          )}
                           <motion.button
                             whileHover={{ scale: 1.1, rotate: 5 }}
                             whileTap={{ scale: 0.95 }}
@@ -321,6 +348,7 @@ const Patients = () => {
                           >
                             <ExternalLink size={20} strokeWidth={2.5} />
                           </motion.button>
+
                            <motion.button
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.95 }}

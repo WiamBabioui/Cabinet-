@@ -1,5 +1,7 @@
 import pool from '../config/db.mysql.js';
 import crypto from 'crypto';
+import Consultation from '../models/Consultation.js';
+
 
 
 // ✅ Générer un numéro de dossier unique
@@ -432,17 +434,34 @@ export const getPortalData = async (req, res) => {
       [patient.id]
     );
 
-    const [consultations] = await pool.execute(
-      `SELECT c.*, CONCAT(u_m.prenom, ' ', u_m.nom) as medecin_nom
-       FROM consultations c
-       JOIN dossiers_medicaux dm ON dm.id = c.dossier_medical_id
-       JOIN medecins m ON m.id = c.medecin_id
-       JOIN utilisateurs u_m ON u_m.id = m.utilisateur_id
-       WHERE dm.patient_id = ?
-       ORDER BY c.date_consultation DESC
-       LIMIT 5`,
-      [patient.id]
-    );
+    // Dernières consultations depuis MongoDB
+    const mongoConsultations = await Consultation.find({ patientId: patient.id })
+      .sort({ consultationDate: -1 })
+      .limit(5)
+      .lean();
+
+    let consultations = [];
+    if (mongoConsultations.length > 0) {
+      const doctorIds = [...new Set(mongoConsultations.map(c => c.doctorId).filter(Boolean))];
+      let doctorMap = {};
+      if (doctorIds.length > 0) {
+        const placeholders = doctorIds.map(() => '?').join(',');
+        const [doctors] = await pool.execute(
+          `SELECT u.id, CONCAT(u.prenom, ' ', u.nom) as nom_complet FROM utilisateurs u WHERE u.id IN (${placeholders})`,
+          doctorIds
+        );
+        doctors.forEach(d => { doctorMap[d.id] = d; });
+      }
+      consultations = mongoConsultations.map(c => ({
+        id: c._id.toString(),
+        date_consultation: c.consultationDate,
+        motif: c.consultationType,
+        diagnostic_principal: c.diagnosis,
+        ordonnance: c.prescription || c.treatment || '',
+        medecin_nom: doctorMap[c.doctorId]?.nom_complet || `Médecin #${c.doctorId}`,
+      }));
+    }
+
 
     res.json({
       patient,
@@ -451,8 +470,118 @@ export const getPortalData = async (req, res) => {
       consultations
     });
 
+
   } catch (err) {
     console.error('getPortalData error:', err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
+
+// ✅ HISTORIQUE COMPLET DES CONSULTATIONS DU PATIENT CONNECTÉ (MongoDB)
+export const getPatientConsultations = async (req, res) => {
+  const { email, id: utilisateurId } = req.user;
+  try {
+    // 1. Trouver l'ID MySQL du patient via son email
+    const [patients] = await pool.execute(
+      `SELECT id FROM patients WHERE email = ? AND deleted_at IS NULL`,
+      [email]
+    );
+
+    if (patients.length === 0) {
+      return res.status(404).json({ message: 'Profil patient introuvable' });
+    }
+
+    const patientId = patients[0].id;
+
+    // 2. Lire les consultations depuis MongoDB (où les médecins sauvegardent)
+    const consultations = await Consultation.find({ patientId })
+      .sort({ consultationDate: -1 })
+      .lean();
+
+    if (consultations.length === 0) {
+      return res.json({ consultations: [] });
+    }
+
+    // 3. Enrichir avec les noms des médecins depuis MySQL
+    const doctorIds = [...new Set(consultations.map(c => c.doctorId).filter(Boolean))];
+
+    let doctorMap = {};
+    if (doctorIds.length > 0) {
+      const placeholders = doctorIds.map(() => '?').join(',');
+      const [doctors] = await pool.execute(
+        `SELECT u.id, CONCAT(u.prenom, ' ', u.nom) as nom_complet, u.email
+         FROM utilisateurs u
+         WHERE u.id IN (${placeholders})`,
+        doctorIds
+      );
+      doctors.forEach(d => { doctorMap[d.id] = d; });
+    }
+
+    // 4. Formater pour le frontend (adapter au format attendu par MesConsultations.jsx)
+    const formatted = consultations.map(c => ({
+      id: c._id.toString(),
+      date_consultation: c.consultationDate,
+      motif: c.consultationType,
+      diagnostic_principal: c.diagnosis,
+      anamnese: c.symptoms?.join(', ') || c.doctorNotes || '',
+      ordonnance: c.prescription || c.treatment || '',
+      medecin_nom: doctorMap[c.doctorId]?.nom_complet || `Médecin #${c.doctorId}`,
+      medecin_email: doctorMap[c.doctorId]?.email || '',
+      // champs supplémentaires disponibles
+      treatment: c.treatment,
+
+      doctorNotes: c.doctorNotes,
+      prescription: c.prescription,
+    }));
+
+    res.json({ consultations: formatted });
+  } catch (err) {
+    console.error('getPatientConsultations error:', err);
+    res.status(500).json({ message: 'Erreur serveur lors de la récupération des consultations' });
+  }
+};
+
+
+// ✅ MODIFICATION DES INFOS ADMINISTRATIVES DU PATIENT (Réservé Secrétaire & Admin)
+export const updatePatientAdmin = async (req, res) => {
+  const { id } = req.params;
+  const {
+    prenom, nom, date_naissance, sexe, telephone, email, cin,
+    adresse_rue, adresse_ville, adresse_code_postal, adresse_pays
+  } = req.body;
+
+  // Validation minimale
+  if (!prenom || !nom || !telephone) {
+    return res.status(400).json({ message: 'Les champs Prénom, Nom et Téléphone sont requis.' });
+  }
+
+  try {
+    const [existing] = await pool.execute(
+      'SELECT id FROM patients WHERE id = ? AND deleted_at IS NULL',
+      [id]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({ message: 'Patient introuvable' });
+    }
+
+    await pool.execute(
+      `UPDATE patients SET
+        prenom = ?, nom = ?, date_naissance = ?, sexe = ?, telephone = ?,
+        email = ?, cin = ?, adresse_rue = ?, adresse_ville = ?,
+        adresse_code_postal = ?, adresse_pays = ?
+       WHERE id = ?`,
+      [
+        prenom, nom, date_naissance || null, sexe || 'M', telephone,
+        email || null, cin || null, adresse_rue || null, adresse_ville || null,
+        adresse_code_postal || null, adresse_pays || 'Maroc',
+        id
+      ]
+    );
+
+    res.json({ message: 'Informations administratives du patient mises à jour avec succès' });
+  } catch (err) {
+    console.error('updatePatientAdmin error:', err);
+    res.status(500).json({ message: 'Erreur serveur lors de la mise à jour des infos administratives' });
+  }
+};

@@ -6,8 +6,11 @@ import {
 } from 'lucide-react';
 import Badge from '../components/common/Badge';
 import Button from '../components/common/Button';
+import EditPatientModal from '../components/common/EditPatientModal';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { useTranslation } from 'react-i18next';
+
 
 // ─── Onglet Info Patient ──────────────────────────────────────────────────────
 const InfoTab = ({ patient }) => {
@@ -183,12 +186,16 @@ const HistoriqueTab = ({ consultations, rendezvous }) => {
 
 // ─── Page Principale ──────────────────────────────────────────────────────────
 const PatientDetail = () => {
-  const { id }       = useParams();
-  const navigate     = useNavigate();
-  const { t } = useTranslation();
-  const [data, setData]     = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setTab]   = useState('info');
+  const { id }          = useParams();
+  const navigate        = useNavigate();
+  const { user }        = useAuth();
+  const { t }           = useTranslation();
+  const [data, setData] = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [activeTab, setTab]     = useState('info');
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  const isSecretaireOrAdmin = ['secretaire', 'admin'].includes(user?.role?.toLowerCase());
 
   const fetchData = async () => {
     try {
@@ -207,38 +214,60 @@ const PatientDetail = () => {
   );
 
   const tabs = [
-    { key: 'info',      label: t('patient_detail.tabs.info') },
-    { key: 'dossier',   label: t('patient_detail.tabs.medical_file') },
+    { key: 'info',       label: t('patient_detail.tabs.info') },
+    { key: 'dossier',    label: t('patient_detail.tabs.medical_file') },
     { key: 'historique', label: t('patient_detail.tabs.history') },
   ];
 
   return (
     <div className="space-y-6">
+      {showEditModal && data?.patient && (
+        <EditPatientModal
+          patient={data.patient}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={fetchData}
+        />
+      )}
+
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <button onClick={() => navigate('/patients')}
-          className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
-          <ArrowLeft size={20} />
-        </button>
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-primary/10 text-primary rounded-2xl flex items-center justify-center text-xl font-bold">
-            {data.patient.prenom.charAt(0)}{data.patient.nom.charAt(0)}
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">
-              {data.patient.prenom} {data.patient.nom}
-            </h1>
-            <div className="flex items-center gap-3 mt-1">
-              <span className="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
-                {data.patient.num_dossier}
-              </span>
-              <Badge variant={data.patient.statut === 'actif' ? 'success' : 'error'}>
-                {data.patient.statut}
-              </Badge>
+          <button onClick={() => navigate('/patients')}
+            className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+            <ArrowLeft size={20} />
+          </button>
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-primary/10 text-primary rounded-2xl flex items-center justify-center text-xl font-bold">
+              {data.patient.prenom.charAt(0)}{data.patient.nom.charAt(0)}
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800">
+                {data.patient.prenom} {data.patient.nom}
+              </h1>
+              <div className="flex items-center gap-3 mt-1">
+                <span className="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
+                  {data.patient.num_dossier}
+                </span>
+                <Badge variant={data.patient.statut === 'actif' ? 'success' : 'error'}>
+                  {data.patient.statut}
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
+
+        {isSecretaireOrAdmin && (
+          <Button
+            onClick={() => setShowEditModal(true)}
+            icon={Edit}
+            variant="outline"
+            className="h-11 px-5 border-slate-200 text-slate-700"
+          >
+            Modifier les infos
+          </Button>
+        )}
       </div>
+
 
       {/* Contact rapide */}
       <div className="flex gap-4">

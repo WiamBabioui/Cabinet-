@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Calendar, MessageSquare,
   Stethoscope, LogOut, ChevronLeft, ChevronRight,
-  ShieldCheck, UserCircle, UserCog, HeartPulse, X
+  ShieldCheck, UserCircle, UserCog, HeartPulse, X, FileText
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -45,6 +45,12 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onMobileClose }) =
       roles: ['medecin']
     },
     {
+      name: t('sidebar.patient_portal'),
+      icon: UserCircle,
+      path: '/patient-portal',
+      roles: ['patient']
+    },
+    {
       name: t('sidebar.chat'),
       icon: MessageSquare,
       path: '/chat',
@@ -56,13 +62,15 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onMobileClose }) =
       path: '/profile',
       roles: ['medecin', 'secretaire', 'patient']
     },
+    
     {
-      name: t('sidebar.patient_portal'),
-      icon: UserCircle,
-      path: '/patient-portal',
+      name: t('sidebar.my_consultations'),
+      icon: FileText,
+      path: '/patient-portal/consultations',
       roles: ['patient']
     },
   ];
+
 
   const filteredLinks = links.filter(link =>
     link.roles.some(role => role.toLowerCase() === userRole)

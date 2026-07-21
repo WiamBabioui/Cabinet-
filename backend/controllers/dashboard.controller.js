@@ -9,6 +9,7 @@ export const getDashboardStats = async (req, res) => {
     // ─── Trouver le doctorId (utilisateurs.id) selon le rôle ───────────────────
     let doctorId = null;
 
+  
     if (userRole === 'medecin') {
       doctorId = Number(id);
     } else if (userRole === 'secretaire') {
