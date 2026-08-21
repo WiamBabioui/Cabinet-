@@ -61,8 +61,30 @@ export const AuthProvider = ({ children }) => {
     });
   };
 
+  const isAdmin = () => {
+    return user?.role?.toLowerCase().trim() === 'admin';
+  };
+
+  const hasPermission = (permission) => {
+    if (isAdmin()) return true;
+    return user?.permissions?.includes(permission) || false;
+  };
+
+  const hasAnyPermission = (...permissions) => {
+    if (isAdmin()) return true;
+    return permissions.some(p => user?.permissions?.includes(p));
+  };
+
+  const hasAllPermissions = (...permissions) => {
+    if (isAdmin()) return true;
+    return permissions.every(p => user?.permissions?.includes(p));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, updateUser, loading }}>
+    <AuthContext.Provider value={{ 
+      user, login, signup, logout, updateUser, loading,
+      isAdmin, hasPermission, hasAnyPermission, hasAllPermissions 
+    }}>
       {children}
     </AuthContext.Provider>
   );

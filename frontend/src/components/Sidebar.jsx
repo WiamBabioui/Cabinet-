@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Calendar, MessageSquare,
   Stethoscope, LogOut, ChevronLeft, ChevronRight,
-  ShieldCheck, UserCircle, UserCog, HeartPulse, X, FileText
+  Shield, ShieldCheck, UserCircle, UserCog, HeartPulse, X, FileText
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -24,7 +24,31 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onMobileClose }) =
       name: t('sidebar.dashboard'),
       icon: LayoutDashboard,
       path: userRole === 'secretaire' ? '/assistant-dashboard' : '/',
-      roles: ['medecin', 'secretaire']
+      roles: ['medecin', 'secretaire', 'admin']
+    },
+    {
+      name: t('sidebar.users', 'Utilisateurs'),
+      icon: Users,
+      path: '/admin/users',
+      roles: ['admin']
+    },
+    {
+      name: t('sidebar.roles', 'Rôles & Permissions'),
+      icon: Shield,
+      path: '/admin/roles',
+      roles: ['admin']
+    },
+    {
+      name: t('sidebar.permissions', 'Permissions'),
+      icon: ShieldCheck,
+      path: '/admin/permissions',
+      roles: ['admin']
+    },
+    {
+      name: t('sidebar.audit_logs', 'Logs d\'Audit'),
+      icon: FileText,
+      path: '/admin/audit-logs',
+      roles: ['admin']
     },
     {
       name: t('sidebar.patients'),
@@ -60,9 +84,8 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onMobileClose }) =
       name: t('sidebar.profile'),
       icon: UserCog,
       path: '/profile',
-      roles: ['medecin', 'secretaire', 'patient']
+      roles: ['medecin', 'secretaire', 'patient', 'admin']
     },
-    
     {
       name: t('sidebar.my_consultations'),
       icon: FileText,

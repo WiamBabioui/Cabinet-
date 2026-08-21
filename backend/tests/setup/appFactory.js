@@ -14,6 +14,7 @@ import dashboardRoutes from '../../routes/dashboard.routes.js';
 import medecinRoutes from '../../routes/medecin.routes.js';
 import consultationRoutes from '../../routes/consultation.routes.js';
 import notificationRoutes from '../../routes/notification.routes.js';
+import adminRoutes from '../../routes/admin.routes.js';
 
 export const createTestApp = () => {
   const app = express();
@@ -32,6 +33,7 @@ export const createTestApp = () => {
   app.use('/api/medecins', medecinRoutes);
   app.use('/api/consultations', consultationRoutes);
   app.use('/api/notifications', notificationRoutes);
+  app.use('/api/admin', adminRoutes);
 
   // Health endpoint
   app.get('/api/health', (req, res) => {

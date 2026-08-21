@@ -3,8 +3,13 @@ backend/node_modules/
 frontend/node_modules/
 mongodb_data/
 .env
+backend/.env
+backend/.env.test
 dist/
 .DS_Store
+
+# MongoDB data directory (runtime data, not source code)
+backend/data/
 
 # Debug & temp scripts
 backend/scratch/
@@ -21,3 +26,7 @@ frontend/cypress/screenshots/
 
 # MongoDB log
 mongodb.log
+
+# Build artifacts
+frontend/dist/
+backend/coverage/

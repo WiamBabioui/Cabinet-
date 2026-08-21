@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../config/db.mysql.js';
+import { getPermissionsForRole } from '../middleware/rbac.middleware.js';
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -165,6 +166,8 @@ export const login = async (req, res) => {
 
     const token = generateToken(user.id);
 
+    const permissions = await getPermissionsForRole(user.role);
+
     res.json({
       message: 'Connexion réussie',
       token,
@@ -177,6 +180,7 @@ export const login = async (req, res) => {
         role: user.role,
         photo_url: user.photo_url || null,
         assigned_doctor_id: user.assigned_doctor_id || null,
+        permissions,
       },
     });
   } catch (err) {
@@ -203,7 +207,12 @@ export const getMe = async (req, res) => {
       [Number(req.user.id)]
     );
 
-    res.json({ user: rows[0] });
+    const user = rows[0];
+    if (user) {
+      user.permissions = await getPermissionsForRole(user.role);
+    }
+
+    res.json({ user });
   } catch (err) {
     console.error('getMe error:', err);
     res.status(500).json({ message: 'Erreur serveur' });

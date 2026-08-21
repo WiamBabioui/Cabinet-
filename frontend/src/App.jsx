@@ -24,6 +24,14 @@ import PatientPortal      from './pages/PatientPortal';
 import MesConsultations   from './pages/MesConsultations';
 import AssistantDashboard from './pages/AssistantDashboard';
 
+// Admin Console Pages
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminRoles from './pages/admin/AdminRoles';
+import AdminPermissions from './pages/admin/AdminPermissions';
+import AdminAuditLogs from './pages/admin/AdminAuditLogs';
+
+
 
 // ─── Role-based index redirect ────────────────────────────────────────────────
 // Patients must go to /patient-portal, secretaires to /assistant-dashboard.
@@ -34,6 +42,7 @@ const RoleBasedIndex = () => {
   const role = user.role?.toLowerCase().trim();
   if (role === 'patient')    return <Navigate to="/patient-portal"      replace />;
   if (role === 'secretaire') return <Navigate to="/assistant-dashboard" replace />;
+  if (role === 'admin')      return <AdminDashboard />;
   return <Dashboard />;
 };
 
@@ -157,6 +166,40 @@ function App() {
           element={
             <PrivateRoute allowedRoles={['patient']}>
               <MesConsultations />
+            </PrivateRoute>
+          }
+        />
+
+        {/* ── Admin Console Routes ── */}
+        <Route
+          path="admin/users"
+          element={
+            <PrivateRoute allowedRoles={['admin']}>
+              <AdminUsers />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="admin/roles"
+          element={
+            <PrivateRoute allowedRoles={['admin']}>
+              <AdminRoles />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="admin/permissions"
+          element={
+            <PrivateRoute allowedRoles={['admin']}>
+              <AdminPermissions />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="admin/audit-logs"
+          element={
+            <PrivateRoute allowedRoles={['admin']}>
+              <AdminAuditLogs />
             </PrivateRoute>
           }
         />

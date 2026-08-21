@@ -19,6 +19,7 @@ import consultationRoutes from './routes/consultation.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import activityLogRoutes from './routes/activitylog.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
+import adminRoutes from './routes/admin.routes.js';
 
 dotenv.config();
 
@@ -59,6 +60,7 @@ app.use('/api/consultations', consultationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/activitylogs', activityLogRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Cabinet+ API fonctionne !' });
@@ -106,4 +108,4 @@ httpServer.listen(PORT, () => {
   console.log(`Serveur lance sur http://localhost:${PORT}`);
 });
 
-// Database connection verified and watch reloaded. Updated comment to trigger reload.
+// Database connection verified and watch reloaded. MongoDB is active.
