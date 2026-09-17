@@ -14,7 +14,6 @@ const generateNumDossier = () => {
 
 // ✅ LISTE des patients (avec filtre par rôle)
 export const getPatients = async (req, res) => {
-  console.log('🔍 USER reçu:', req.user); // ← ajoute cette ligne
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;

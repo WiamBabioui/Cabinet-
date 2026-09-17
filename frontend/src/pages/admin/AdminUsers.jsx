@@ -2,14 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Users, Plus, Search, Shield, Briefcase, UserCheck, Key,
   ToggleLeft, ToggleRight, Trash2, Loader2, X, AlertCircle, RefreshCw,
-  Mail, Phone, Lock, EyeOff, ShieldAlert, Check, CheckSquare
+  Mail, Phone, Lock, Check
 } from 'lucide-react';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import api from '../../services/api';
-import { useTranslation } from 'react-i18next';
-import { motion, AnimatePresence } from 'framer-motion';
 
 // ─── Modal Reset Password ───────────────────────────────────────────────────
 const ResetPasswordModal = ({ user, onClose }) => {
