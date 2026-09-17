@@ -20,5 +20,24 @@ export default defineConfig({
       'dompurify':  path.resolve(__dirname, 'src/stubs/empty.js'),
     }
   },
-
+  build: {
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+              return 'vendor';
+            }
+            if (id.includes('lucide-react') || id.includes('framer-motion') || id.includes('recharts')) {
+              return 'ui';
+            }
+            if (id.includes('jspdf') || id.includes('fflate')) {
+              return 'pdf';
+            }
+          }
+        },
+      },
+    },
+  },
 })
