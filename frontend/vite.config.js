@@ -20,10 +20,5 @@ export default defineConfig({
       'dompurify':  path.resolve(__dirname, 'src/stubs/empty.js'),
     }
   },
-  build: {
-    rollupOptions: {
-      // Belt-and-suspenders: also mark as external in prod build
-      external: ['fflate']
-    }
-  }
+
 })

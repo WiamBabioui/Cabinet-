@@ -66,6 +66,20 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Cabinet+ API fonctionne !' });
 });
 
+// Serve frontend in production single-host deployment
+if (process.env.NODE_ENV === 'production') {
+  const frontendBuildPath = path.join(__dirname, '../frontend/dist');
+  app.use(express.static(frontendBuildPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
+      return next();
+    }
+    res.sendFile(path.join(frontendBuildPath, 'index.html'), (err) => {
+      if (err) next();
+    });
+  });
+}
+
 io.on('connection', (socket) => {
   console.log('Client connecte:', socket.id);
 
